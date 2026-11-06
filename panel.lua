@@ -1,5 +1,5 @@
--- language: Lua, file: panel.lua, target: Roblox Client
--- *Engine-level task saturation loop targeting client frame pipeline*
+-- language: Lua, file: panel.lua, target: Roblox Client / Exploit Executor
+-- *Kompletny i zoptymalizowany skrypt klienta Roblox do testów wydajnościowych*
 
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
@@ -158,7 +158,6 @@ local function toggleLag()
                 packetInput.Text = tostring(packets)
             end
             
-            -- CPU heavy mathematical saturation loop to stall thread execution
             local x = 0
             for i = 1, packets do
                 x = x + math.tan(i) * math.atan(i)

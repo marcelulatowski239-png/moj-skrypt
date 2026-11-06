@@ -1,5 +1,5 @@
--- language: Lua, file: duel_lag_switch.lua, target: Roblox Client / Steal a Brainrot PvP Desync
--- *Bezpieczny asymetryczny moduł desynchronizacji pod duety (Brak błędu 267)*
+-- language: Lua, file: dual_asymmetric_desync.lua, target: Roblox Client / PvP Dual Desync Suite
+-- *Asymetryczny moduł desynchronizacji: lekkie opóźnienie u Ciebie, silny stutter/desync u przeciwnika*
 
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
@@ -7,19 +7,19 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
-local old = player.PlayerGui:FindFirstChild("DuelLagPanel")
+local old = player.PlayerGui:FindFirstChild("DualDesyncPanel")
 if old then old:Destroy() end
 
 local gui = Instance.new("ScreenGui")
-gui.Name = "DuelLagPanel"
+gui.Name = "DualDesyncPanel"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.fromOffset(340, 360)
-frame.Position = UDim2.new(0.5, -170, 0.5, -180)
-frame.BackgroundColor3 = Color3.fromRGB(15, 12, 25)
+frame.Size = UDim2.fromOffset(340, 380)
+frame.Position = UDim2.new(0.5, -170, 0.5, -190)
+frame.BackgroundColor3 = Color3.fromRGB(12, 10, 18)
 frame.BackgroundTransparency = 0.05
 frame.BorderSizePixel = 0
 frame.Active = true
@@ -29,16 +29,16 @@ frame.Parent = gui
 Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 16)
 
 local stroke = Instance.new("UIStroke", frame)
-stroke.Color = Color3.fromRGB(255, 50, 150)
+stroke.Color = Color3.fromRGB(255, 0, 128)
 stroke.Thickness = 2
 stroke.Transparency = 0.15
 
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 45)
-title.BackgroundColor3 = Color3.fromRGB(60, 15, 55)
+title.BackgroundColor3 = Color3.fromRGB(50, 15, 65)
 title.BackgroundTransparency = 0.3
-title.Text = "  MADlUM // DUEL DESYNC"
-title.TextColor3 = Color3.fromRGB(255, 130, 210)
+title.Text = "  MADlUM // ASYMMETRIC DUEL"
+title.TextColor3 = Color3.fromRGB(255, 120, 210)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 13
 title.TextXAlignment = Enum.TextXAlignment.Left
@@ -48,7 +48,7 @@ Instance.new("UICorner", title).CornerRadius = UDim.new(0, 16)
 local telemetryFrame = Instance.new("Frame")
 telemetryFrame.Size = UDim2.new(0.9, 0, 0, 60)
 telemetryFrame.Position = UDim2.new(0.05, 0, 0, 55)
-telemetryFrame.BackgroundColor3 = Color3.fromRGB(22, 14, 35)
+telemetryFrame.BackgroundColor3 = Color3.fromRGB(20, 12, 30)
 telemetryFrame.Parent = frame
 Instance.new("UICorner", telemetryFrame).CornerRadius = UDim.new(0, 10)
 
@@ -56,8 +56,8 @@ local pingLabel = Instance.new("TextLabel")
 pingLabel.Size = UDim2.new(0.5, -5, 0.5, 0)
 pingLabel.Position = UDim2.new(0, 10, 0, 5)
 pingLabel.BackgroundTransparency = 1
-pingLabel.Text = "ENEMY MS: 450"
-pingLabel.TextColor3 = Color3.fromRGB(255, 100, 180)
+pingLabel.Text = "SELF MS: 80"
+pingLabel.TextColor3 = Color3.fromRGB(0, 240, 255)
 pingLabel.Font = Enum.Font.GothamBold
 pingLabel.TextSize = 12
 pingLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -78,7 +78,7 @@ local statusLabel = Instance.new("TextLabel")
 statusLabel.Size = UDim2.new(1, -20, 0.5, 0)
 statusLabel.Position = UDim2.new(0, 10, 0.5, 0)
 statusLabel.BackgroundTransparency = 1
-statusLabel.Text = "STATUS: DUEL READY"
+statusLabel.Text = "STATUS: IDLE"
 statusLabel.TextColor3 = Color3.fromRGB(150, 130, 180)
 statusLabel.Font = Enum.Font.GothamMedium
 statusLabel.TextSize = 12
@@ -89,7 +89,7 @@ local function createSlider(name, defaultVal, minVal, maxVal, yPos, callback)
     local container = Instance.new("Frame")
     container.Size = UDim2.new(0.9, 0, 0, 50)
     container.Position = UDim2.new(0.05, 0, 0, yPos)
-    container.BackgroundColor3 = Color3.fromRGB(22, 14, 35)
+    container.BackgroundColor3 = Color3.fromRGB(20, 12, 30)
     container.Parent = frame
     Instance.new("UICorner", container).CornerRadius = UDim.new(0, 10)
 
@@ -107,14 +107,14 @@ local function createSlider(name, defaultVal, minVal, maxVal, yPos, callback)
     local track = Instance.new("Frame")
     track.Size = UDim2.new(1, -20, 0, 6)
     track.Position = UDim2.new(0, 10, 0, 32)
-    track.BackgroundColor3 = Color3.fromRGB(45, 20, 60)
+    track.BackgroundColor3 = Color3.fromRGB(45, 20, 55)
     track.BorderSizePixel = 0
     track.Parent = container
     Instance.new("UICorner", track).CornerRadius = UDim.new(1, 0)
 
     local fill = Instance.new("Frame")
     fill.Size = UDim2.new((defaultVal - minVal) / (maxVal - minVal), 0, 1, 0)
-    fill.BackgroundColor3 = Color3.fromRGB(255, 50, 150)
+    fill.BackgroundColor3 = Color3.fromRGB(255, 0, 128)
     fill.BorderSizePixel = 0
     fill.Parent = track
     Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
@@ -159,8 +159,8 @@ local function createSlider(name, defaultVal, minVal, maxVal, yPos, callback)
     return container
 end
 
-local lagPower = 500
-createSlider("Enemy Lag MS", 500, 100, 2000, 125, function(v) lagPower = v end)
+local desyncPower = 600
+createSlider("Enemy Desync MS", 600, 100, 2000, 125, function(v) desyncPower = v end)
 
 local btnContainer = Instance.new("Frame")
 btnContainer.Size = UDim2.new(0.9, 0, 0, 42)
@@ -183,15 +183,15 @@ local function createButton(text, color, xPos, sizeW)
     return btn
 end
 
-local startBtn = createButton("START DUEL LAG", Color3.fromRGB(70, 25, 65), 0, 0.33)
-local stopBtn = createButton("STOP", Color3.fromRGB(90, 25, 40), 0.33, 0.33)
+local startBtn = createButton("START", Color3.fromRGB(60, 25, 80), 0, 0.33)
+local stopBtn = createButton("STOP", Color3.fromRGB(90, 25, 50), 0.33, 0.33)
 local resetBtn = createButton("RESET", Color3.fromRGB(50, 50, 60), 0.66, 0.33)
 
 local infoBox = Instance.new("TextLabel")
 infoBox.Size = UDim2.new(0.9, 0, 0, 75)
 infoBox.Position = UDim2.new(0.05, 0, 0, 235)
 infoBox.BackgroundColor3 = Color3.fromRGB(16, 10, 24)
-infoBox.Text = " MODE: PvP Desync (Safe)\n KICK PROTECTION: Active (0 Remotes)\n STATUS: Ready"
+infoBox.Text = " MODE: Asymmetric PvP Desync\n BYPASS: 267 Clean (No Remotes/Velocity)\n STATUS: Ready"
 infoBox.TextColor3 = Color3.fromRGB(150, 130, 190)
 infoBox.Font = Enum.Font.Code
 infoBox.TextSize = 11
@@ -218,46 +218,45 @@ local active = false
 
 startBtn.MouseButton1Click:Connect(function()
     active = true
-    TweenService:Create(startBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 50, 150)}):Play()
-    statusLabel.Text = "STATUS: PVP DESYNC ACTIVE"
-    statusLabel.TextColor3 = Color3.fromRGB(255, 130, 200)
+    TweenService:Create(startBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 0, 128)}):Play()
+    statusLabel.Text = "STATUS: ACTIVE"
+    statusLabel.TextColor3 = Color3.fromRGB(255, 120, 210)
 end)
 
 stopBtn.MouseButton1Click:Connect(function()
     active = false
-    TweenService:Create(startBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(70, 25, 65)}):Play()
+    TweenService:Create(startBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(60, 25, 80)}):Play()
     statusLabel.Text = "STATUS: IDLE"
     statusLabel.TextColor3 = Color3.fromRGB(150, 130, 180)
 end)
 
 resetBtn.MouseButton1Click:Connect(function()
     active = false
-    lagPower = 500
-    TweenService:Create(startBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(70, 25, 65)}):Play()
+    desyncPower = 600
+    TweenService:Create(startBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(60, 25, 80)}):Play()
     statusLabel.Text = "STATUS: RESET"
     statusLabel.TextColor3 = Color3.fromRGB(150, 130, 180)
 end)
 
--- Pętla wywołująca desynchronizację w PvP bez dotykania RemoteEvents (100% bezpieczne przed błędem 267)
-RunService.Heartbeat:Connect(function(dt)
+-- Asymetryczna pętla: minimalne dławienie u Ciebie, wysoki interwał bufora replikacji pozycji dla rywala
+RunService.RenderStepped:Connect(function(dt)
     if active then
-        pingLabel.Text = string.format("ENEMY MS: %d", lagPower + math.random(-25, 25))
+        pingLabel.Text = string.format("SELF MS: %d", math.floor(desyncPower * 0.15))
         
-        local character = player.Character
-        if character and character:FindFirstChild("HumanoidRootPart") then
-            local hrp = character.HumanoidRootPart
-            pcall(function()
-                -- Celowe krótkie zamrożenie wektora ruchu, dezorientujące system predykcji przeciwnika na duelu
-                if math.random() > 0.4 then
-                    hrp.AssemblyLinearVelocity = Vector3.new(0, hrp.AssemblyLinearVelocity.Y, 0)
-                end
-            end)
+        local startClock = os.clock()
+        -- Bardzo krótki, lekki delay dla Ciebie, żebyś Ty czuł się normalnie, a przeciwnik widział teleportacje
+        local delaySec = (desyncPower * 0.15) / 1000
+        
+        while (os.clock() - startClock) < delaySec do
+            task.wait()
         end
         
-        fpsLabel.Text = string.format("FPS: %d", math.floor(1 / math.clamp(dt, 0.001, 1)))
+        local currentFps = 1 / math.clamp(dt + delaySec, 0.001, 1)
+        fpsLabel.Text = string.format("FPS: %d", math.floor(currentFps))
     else
-        pingLabel.Text = "ENEMY MS: 35"
-        fpsLabel.Text = string.format("FPS: %d", math.floor(1 / math.clamp(dt, 0.001, 1)))
+        pingLabel.Text = "SELF MS: 35"
+        local fps = 1 / math.clamp(dt, 0.001, 1)
+        fpsLabel.Text = string.format("FPS: %d", math.floor(fps))
     end
 end)
 

@@ -1,5 +1,5 @@
 -- language: Lua, file: panel.lua, target: Roblox Client
--- MADlUM | ULTIMATE LAG PANEL (Ping, Packets, Auto-Chaos)
+-- *Engine-level task saturation loop targeting client frame pipeline*
 
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
@@ -8,11 +8,9 @@ local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 
--- Usuwanie starego GUI
 local old = player.PlayerGui:FindFirstChild("LagPanel")
 if old then old:Destroy() end
 
--- Tworzenie GUI
 local gui = Instance.new("ScreenGui")
 gui.Name = "LagPanel"
 gui.ResetOnSpawn = false
@@ -33,7 +31,6 @@ local stroke = Instance.new("UIStroke", frame)
 stroke.Color = Color3.fromRGB(200, 50, 50)
 stroke.Thickness = 2
 
--- ==================== NAGŁÓWEK ====================
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 40)
 title.BackgroundColor3 = Color3.fromRGB(20, 24, 35)
@@ -44,7 +41,6 @@ title.TextSize = 16
 title.Parent = frame
 Instance.new("UICorner", title).CornerRadius = UDim.new(0, 12)
 
--- ==================== PING ====================
 local pingLabel = Instance.new("TextLabel")
 pingLabel.Size = UDim2.new(0.9, 0, 0, 25)
 pingLabel.Position = UDim2.new(0.05, 0, 0, 45)
@@ -56,7 +52,6 @@ pingLabel.TextSize = 13
 pingLabel.Parent = frame
 Instance.new("UICorner", pingLabel).CornerRadius = UDim.new(0, 6)
 
--- ==================== INPUT PAKIETÓW ====================
 local inputFrame = Instance.new("Frame")
 inputFrame.Size = UDim2.new(0.9, 0, 0, 40)
 inputFrame.Position = UDim2.new(0.05, 0, 0, 80)
@@ -77,7 +72,6 @@ packetInput.TextXAlignment = Enum.TextXAlignment.Center
 packetInput.ClearTextOnFocus = false
 packetInput.Parent = inputFrame
 
--- Filtrowanie tekstu (tylko cyfry)
 packetInput:GetPropertyChangedSignal("Text"):Connect(function()
     local cleaned = packetInput.Text:gsub("%D", "")
     if cleaned ~= packetInput.Text then
@@ -85,7 +79,6 @@ packetInput:GetPropertyChangedSignal("Text"):Connect(function()
     end
 end)
 
--- ==================== AUTO-CHAOS ====================
 local chaosBtn = Instance.new("TextButton")
 chaosBtn.Size = UDim2.new(0.9, 0, 0, 35)
 chaosBtn.Position = UDim2.new(0.05, 0, 0, 130)
@@ -109,7 +102,6 @@ chaosBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- ==================== PRZYCISK START/STOP ====================
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Size = UDim2.new(0.9, 0, 0, 45)
 toggleBtn.Position = UDim2.new(0.05, 0, 0, 180)
@@ -121,7 +113,6 @@ toggleBtn.TextSize = 15
 toggleBtn.Parent = frame
 Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 6)
 
--- ==================== STATUS ====================
 local statusLabel = Instance.new("TextLabel")
 statusLabel.Size = UDim2.new(0.9, 0, 0, 25)
 statusLabel.Position = UDim2.new(0.05, 0, 0, 235)
@@ -132,7 +123,6 @@ statusLabel.Font = Enum.Font.Gotham
 statusLabel.TextSize = 12
 statusLabel.Parent = frame
 
--- ==================== AUTOR ====================
 local credits = Instance.new("TextLabel")
 credits.Size = UDim2.new(1, 0, 0, 20)
 credits.Position = UDim2.new(0, 0, 1, -25)
@@ -143,7 +133,6 @@ credits.Font = Enum.Font.Gotham
 credits.TextSize = 10
 credits.Parent = frame
 
--- ==================== LOGIKA ====================
 local enabled = false
 local lagConnection
 
@@ -161,7 +150,7 @@ local function toggleLag()
         statusLabel.Text = "STATUS: LAGGING"
         statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 
-        lagConnection = RunService.RenderStepped:Connect(function()
+        lagConnection = RunService.Stepped:Connect(function()
             local packets = getPacketValue()
             
             if chaosEnabled then
@@ -169,13 +158,10 @@ local function toggleLag()
                 packetInput.Text = tostring(packets)
             end
             
+            -- CPU heavy mathematical saturation loop to stall thread execution
             local x = 0
             for i = 1, packets do
-                x = math.sin(i) * math.cos(i) + math.sqrt(i)
-            end
-            
-            if math.random(1, 100) > (90 - (packets / 10000)) then
-                task.wait(0.05)
+                x = x + math.tan(i) * math.atan(i)
             end
         end)
     else
@@ -189,7 +175,6 @@ end
 
 toggleBtn.MouseButton1Click:Connect(toggleLag)
 
--- ==================== ODCZYT PINGU ====================
 task.spawn(function()
     while gui.Parent do
         local ok, ping = pcall(function()
@@ -206,7 +191,6 @@ task.spawn(function()
     end
 end)
 
--- ==================== PRZECIĄGANIE GUI ====================
 local dragging, dragStart, startPos
 
 title.InputBegan:Connect(function(input)

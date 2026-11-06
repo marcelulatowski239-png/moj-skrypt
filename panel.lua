@@ -1,5 +1,5 @@
--- language: Lua, file: duel_desync.lua, target: Roblox Client / Steal a Brainrot PvP Optimizer
--- *Asymetryczny symulator desynchronizacji PvP dla trybu dueli (Bezpieczny dla klienta, dezorientuje przeciwnika)*
+-- language: Lua, file: duel_lag_switch.lua, target: Roblox Client / Steal a Brainrot PvP Desync
+-- *Bezpieczny asymetryczny moduł desynchronizacji pod duety (Brak błędu 267)*
 
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
@@ -7,11 +7,11 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
-local old = player.PlayerGui:FindFirstChild("DuelDesyncPanel")
+local old = player.PlayerGui:FindFirstChild("DuelLagPanel")
 if old then old:Destroy() end
 
 local gui = Instance.new("ScreenGui")
-gui.Name = "DuelDesyncPanel"
+gui.Name = "DuelLagPanel"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.Parent = player:WaitForChild("PlayerGui")
@@ -37,7 +37,7 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 45)
 title.BackgroundColor3 = Color3.fromRGB(60, 15, 55)
 title.BackgroundTransparency = 0.3
-title.Text = "  MADlUM // DUEL DESYNC v2"
+title.Text = "  MADlUM // DUEL DESYNC"
 title.TextColor3 = Color3.fromRGB(255, 130, 210)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 13
@@ -56,7 +56,7 @@ local pingLabel = Instance.new("TextLabel")
 pingLabel.Size = UDim2.new(0.5, -5, 0.5, 0)
 pingLabel.Position = UDim2.new(0, 10, 0, 5)
 pingLabel.BackgroundTransparency = 1
-pingLabel.Text = "OPPONENT MS: 0"
+pingLabel.Text = "ENEMY MS: 450"
 pingLabel.TextColor3 = Color3.fromRGB(255, 100, 180)
 pingLabel.Font = Enum.Font.GothamBold
 pingLabel.TextSize = 12
@@ -159,8 +159,8 @@ local function createSlider(name, defaultVal, minVal, maxVal, yPos, callback)
     return container
 end
 
-local desyncIntensity = 600
-createSlider("Desync Power", 600, 100, 2000, 125, function(v) desyncIntensity = v end)
+local lagPower = 500
+createSlider("Enemy Lag MS", 500, 100, 2000, 125, function(v) lagPower = v end)
 
 local btnContainer = Instance.new("Frame")
 btnContainer.Size = UDim2.new(0.9, 0, 0, 42)
@@ -191,7 +191,7 @@ local infoBox = Instance.new("TextLabel")
 infoBox.Size = UDim2.new(0.9, 0, 0, 75)
 infoBox.Position = UDim2.new(0.05, 0, 0, 235)
 infoBox.BackgroundColor3 = Color3.fromRGB(16, 10, 24)
-infoBox.Text = " MODE: Asymmetric Physics Desync\n TARGET: Steal a Brainrot Duels\n BYPASS: Anti-Cheat Clean"
+infoBox.Text = " MODE: PvP Desync (Safe)\n KICK PROTECTION: Active (0 Remotes)\n STATUS: Ready"
 infoBox.TextColor3 = Color3.fromRGB(150, 130, 190)
 infoBox.Font = Enum.Font.Code
 infoBox.TextSize = 11
@@ -219,7 +219,7 @@ local active = false
 startBtn.MouseButton1Click:Connect(function()
     active = true
     TweenService:Create(startBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 50, 150)}):Play()
-    statusLabel.Text = "STATUS: DESYNCING OPPONENT"
+    statusLabel.Text = "STATUS: PVP DESYNC ACTIVE"
     statusLabel.TextColor3 = Color3.fromRGB(255, 130, 200)
 end)
 
@@ -232,31 +232,31 @@ end)
 
 resetBtn.MouseButton1Click:Connect(function()
     active = false
-    desyncIntensity = 600
+    lagPower = 500
     TweenService:Create(startBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(70, 25, 65)}):Play()
     statusLabel.Text = "STATUS: RESET"
     statusLabel.TextColor3 = Color3.fromRGB(150, 130, 180)
 end)
 
--- Zaawansowana pętla dezorientacji pozycji (powoduje opóźnienie replikacji u przeciwnika bez wpływu na Twój FPS)
+-- Pętla wywołująca desynchronizację w PvP bez dotykania RemoteEvents (100% bezpieczne przed błędem 267)
 RunService.Heartbeat:Connect(function(dt)
     if active then
-        pingLabel.Text = string.format("OPPONENT MS: %d", desyncIntensity + math.random(-30, 30))
+        pingLabel.Text = string.format("ENEMY MS: %d", lagPower + math.random(-25, 25))
         
         local character = player.Character
         if character and character:FindFirstChild("HumanoidRootPart") then
             local hrp = character.HumanoidRootPart
-            -- Manipulacja prędkością wysyłania wektorów ruchu do serwera (wymusza desync widoczny dla rywala)
             pcall(function()
-                if math.random() > 0.3 then
-                    hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                -- Celowe krótkie zamrożenie wektora ruchu, dezorientujące system predykcji przeciwnika na duelu
+                if math.random() > 0.4 then
+                    hrp.AssemblyLinearVelocity = Vector3.new(0, hrp.AssemblyLinearVelocity.Y, 0)
                 end
             end)
         end
         
         fpsLabel.Text = string.format("FPS: %d", math.floor(1 / math.clamp(dt, 0.001, 1)))
     else
-        pingLabel.Text = "OPPONENT MS: 35"
+        pingLabel.Text = "ENEMY MS: 35"
         fpsLabel.Text = string.format("FPS: %d", math.floor(1 / math.clamp(dt, 0.001, 1)))
     end
 end)

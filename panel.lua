@@ -1,21 +1,25 @@
--- language: Lua, file: panel.lua, target: Roblox Executor / Steal a Brainrot Duels
--- *Panel diagnostyczny i system buforowania replikacji pozycji w czasie rzeczywistym*
+-- language: Lua, file: panel.lua, target: Roblox Executor / Dual Player Position Buffer
+-- *Zaawansowany panel buforowania i bezpiecznej synchronizacji klienta*
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
 
 local localPlayer = Players.LocalPlayer
-local oldGui = localPlayer.PlayerGui:FindFirstChild("DuelLatencyPanel")
-if oldGui then oldGui:Destroy() end
 
 local remoteEvent = ReplicatedStorage:WaitForChild("SyncEvent", 5)
+if not remoteEvent then
+    warn("[-] SyncEvent not found in ReplicatedStorage!")
+end
 
 local simulatedDelayMs = 300
 local testActive = true
 local positionBuffers = {}
+
+-- Czyszczenie starego GUI
+local oldGui = localPlayer.PlayerGui:FindFirstChild("DuelLatencyPanel")
+if oldGui then oldGui:Destroy() end
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "DuelLatencyPanel"
@@ -168,7 +172,7 @@ local infoBox = Instance.new("TextLabel")
 infoBox.Size = UDim2.new(0.9, 0, 0, 55)
 infoBox.Position = UDim2.new(0.05, 0, 0, 255)
 infoBox.BackgroundColor3 = Color3.fromRGB(16, 10, 24)
-infoBox.Text = " STATUS: Ready\n LOGIC: Server Validated & Clean"
+infoBox.Text = " STATUS: Server Validated\n BUFFER: Clean Spawns & Resets"
 infoBox.TextColor3 = Color3.fromRGB(150, 130, 190)
 infoBox.Font = Enum.Font.Code
 infoBox.TextSize = 11
@@ -190,6 +194,7 @@ credits.Font = Enum.Font.Gotham
 credits.TextSize = 10
 credits.Parent = frame
 
+-- Odbieranie danych ze zweryfikowanego RemoteEvent
 if remoteEvent then
     remoteEvent.OnClientEvent:Connect(function(action, targetPlayer, cframe, timeStamp)
         if action == "CleanupPlayer" then
@@ -221,6 +226,7 @@ RunService.RenderStepped:Connect(function(dt)
 
     local now = os.clock()
 
+    -- Wysyłanie własnej pozycji na serwer (20 Hz)
     if testActive and remoteEvent and (now - lastSend >= 0.05) then
         lastSend = now
         local char = localPlayer.Character
@@ -231,6 +237,7 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
+    -- Odtwarzanie opóźnionego ruchu przeciwnika z bufora (przeszłość)
     if testActive then
         local delaySec = simulatedDelayMs / 1000
         for player, buffer in pairs(positionBuffers) do
@@ -245,6 +252,7 @@ RunService.RenderStepped:Connect(function(dt)
     end
 end)
 
+-- Przesuwanie okna myszką
 local dragging, dragStart, startPos
 title.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then

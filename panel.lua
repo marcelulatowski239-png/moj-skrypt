@@ -41,7 +41,6 @@ title.BackgroundTransparency = 0.3
 title.Text = "  MADlUM // HEAVY PACED STRESS"
 title.TextColor3 = Color3.fromRGB(255, 120, 210)
 title.Font = Enum.Font.GothamBold
-title.TextSize:eq = nil
 title.TextSize = 12
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = frame
@@ -133,7 +132,6 @@ toggleBtn.MouseButton1Click:Connect(function()
                     for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
                         if v:IsA("RemoteEvent") or v:IsA("UnreliableRemoteEvent") then
                             local payload = {}
-                            -- Zwiększona paczka danych obciążająca bufor replikacji
                             for i = 1, 1500 do
                                 table.insert(payload, math.random() * 1e5)
                             end
@@ -141,7 +139,6 @@ toggleBtn.MouseButton1Click:Connect(function()
                         end
                     end
                 end)
-                -- Krótszy, ale wciąż bezpieczny interwał pozwalający podnieść ms bez natychmiastowego uderzenia w limit 267
                 task.wait(0.15)
             end
         end)
@@ -154,7 +151,6 @@ toggleBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Pobieranie rzeczywistego pingu serwera Roblox w czasie rzeczywistym
 game:GetService("RunService").Heartbeat:Connect(function()
     local success, pingVal = pcall(function()
         return Stats.Network.ServerStatsItem["Data Ping"]:GetValue()

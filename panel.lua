@@ -238,13 +238,11 @@ resetBtn.MouseButton1Click:Connect(function()
     statusLabel.TextColor3 = Color3.fromRGB(150, 130, 180)
 end)
 
--- Asymetryczna pętla: minimalne dławienie u Ciebie, wysoki interwał bufora replikacji pozycji dla rywala
 RunService.RenderStepped:Connect(function(dt)
     if active then
         pingLabel.Text = string.format("SELF MS: %d", math.floor(desyncPower * 0.15))
         
         local startClock = os.clock()
-        -- Bardzo krótki, lekki delay dla Ciebie, żebyś Ty czuł się normalnie, a przeciwnik widział teleportacje
         local delaySec = (desyncPower * 0.15) / 1000
         
         while (os.clock() - startClock) < delaySec do

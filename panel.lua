@@ -1,5 +1,6 @@
--- MADlUM | PACKET LAGGER GUI (Manual Input)
--- Local diagnostic simulator + TextBox for Custom Packet Count (1 - 100000)
+-- MADlUM | PACKET LAGGER GUI (Targeted Simulation)
+-- Local diagnostic simulator with UI showing targeted lag
+-- WARNING: This is a VISUAL simulation only. It does NOT send actual packets to other players.
 
 local Players = game:GetService("Players")
 local Stats = game:GetService("Stats")
@@ -17,8 +18,8 @@ gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local main = Instance.new("Frame")
-main.Size = UDim2.fromOffset(440, 420) -- Увеличили высоту для TextBox
-main.Position = UDim2.new(0.5, -220, 0.5, -210)
+main.Size = UDim2.fromOffset(440, 480) -- Увеличили высоту для новых настроек
+main.Position = UDim2.new(0.5, -220, 0.5, -240)
 main.BackgroundColor3 = Color3.fromRGB(15, 17, 27)
 main.BorderSizePixel = 0
 main.Active = true
@@ -52,7 +53,7 @@ create("TextLabel", {
     Size = UDim2.new(1, -90, 1, 0),
     Position = UDim2.fromOffset(16, 0),
     BackgroundTransparency = 1,
-    Text = "MADlUM | LAGGER (INPUT)",
+    Text = "MADlUM | TARGETED LAGGER",
     TextColor3 = Color3.fromRGB(120, 155, 255),
     Font = Enum.Font.GothamBold,
     TextSize = 15,
@@ -97,7 +98,6 @@ end)
 
 -- MINIMIZE
 local minimized = false
-
 local minimize = create("TextButton", {
     Size = UDim2.fromOffset(32, 30),
     Position = UDim2.new(1, -42, 0, 10),
@@ -117,13 +117,13 @@ local content = create("Frame", {
     BackgroundTransparency = 1
 }, main)
 
-local function label(text, y)
+local function label(text, y, color)
     local l = create("TextLabel", {
         Size = UDim2.new(1, -32, 0, 35),
         Position = UDim2.fromOffset(16, y),
         BackgroundColor3 = Color3.fromRGB(27, 31, 46),
         Text = text,
-        TextColor3 = Color3.fromRGB(230, 235, 250),
+        TextColor3 = color or Color3.fromRGB(230, 235, 250),
         Font = Enum.Font.Gotham,
         TextSize = 13
     }, content)
@@ -132,10 +132,10 @@ local function label(text, y)
     return l
 end
 
-local pingLabel = label("PING: Loading...", 15)
-local fpsLabel = label("FPS: Loading...", 58)
-local lossLabel = label("SIMULATED PACKET LOSS: 0%", 101)
-local delayLabel = label("SIMULATED DELAY: 0 ms", 144)
+local pingLabel = label("YOUR PING: Loading...", 15, Color3.fromRGB(100, 200, 255))
+local fpsLabel = label("YOUR FPS: Loading...", 58, Color3.fromRGB(100, 200, 255))
+local targetPingLabel = label("TARGET PING: 0 ms", 101, Color3.fromRGB(255, 100, 100))
+local targetLossLabel = label("TARGET LOSS: 0%", 144, Color3.fromRGB(255, 100, 100))
 
 -- ==================== TEXTBOX ДЛЯ ВВОДА ====================
 local inputBg = create("Frame", {
@@ -150,7 +150,7 @@ local packetInput = create("TextBox", {
     Size = UDim2.new(1, -100, 1, 0),
     Position = UDim2.fromOffset(10, 0),
     BackgroundTransparency = 1,
-    Text = "50000",
+    Text = "100000",
     PlaceholderText = "1 - 100000",
     TextColor3 = Color3.fromRGB(230, 235, 250),
     Font = Enum.Font.GothamBold,
@@ -170,7 +170,6 @@ create("TextLabel", {
     TextXAlignment = Enum.TextXAlignment.Right
 }, inputBg)
 
--- Валидация ввода (только цифры)
 packetInput:GetPropertyChangedSignal("Text"):Connect(function()
     local cleaned = packetInput.Text:gsub("%D", "")
     if cleaned ~= packetInput.Text then
@@ -178,10 +177,9 @@ packetInput:GetPropertyChangedSignal("Text"):Connect(function()
     end
 end)
 
--- Функция получения безопасного значения (1 - 100,000)
 local function getPacketValue()
     local num = tonumber(packetInput.Text)
-    if not num then return 1000 end
+    if not num then return 50000 end
     if num < 1 then return 1 end
     if num > 100000 then return 100000 end
     return math.floor(num)
@@ -204,13 +202,13 @@ local function button(text, y, color)
 end
 
 local enabled = false
-local toggle = button("SIMULATION: OFF", 235, Color3.fromRGB(55, 75, 145))
+local toggle = button("TARGETED SIMULATION: OFF", 235, Color3.fromRGB(55, 75, 145))
 
 toggle.MouseButton1Click:Connect(function()
     enabled = not enabled
-    toggle.Text = enabled and "SIMULATION: ON" or "SIMULATION: OFF"
+    toggle.Text = enabled and "TARGETED SIMULATION: ON" or "TARGETED SIMULATION: OFF"
     toggle.BackgroundColor3 = enabled
-        and Color3.fromRGB(35, 145, 100)
+        and Color3.fromRGB(200, 50, 50)
         or Color3.fromRGB(55, 75, 145)
 end)
 
@@ -218,11 +216,11 @@ local reset = button("RESET SIMULATION", 280, Color3.fromRGB(80, 85, 105))
 
 reset.MouseButton1Click:Connect(function()
     enabled = false
-    toggle.Text = "SIMULATION: OFF"
+    toggle.Text = "TARGETED SIMULATION: OFF"
     toggle.BackgroundColor3 = Color3.fromRGB(55, 75, 145)
-    lossLabel.Text = "SIMULATED PACKET LOSS: 0%"
-    delayLabel.Text = "SIMULATED DELAY: 0 ms"
-    packetInput.Text = "50000"
+    targetPingLabel.Text = "TARGET PING: 0 ms"
+    targetLossLabel.Text = "TARGET LOSS: 0%"
+    packetInput.Text = "100000"
 end)
 
 minimize.MouseButton1Click:Connect(function()
@@ -230,11 +228,11 @@ minimize.MouseButton1Click:Connect(function()
     content.Visible = not minimized
     main.Size = minimized
         and UDim2.fromOffset(440, 50)
-        or UDim2.fromOffset(440, 420)
+        or UDim2.fromOffset(440, 480)
     minimize.Text = minimized and "+" or "-"
 end)
 
--- ==================== LIVE PING, FPS & SIMULATION LOGIC ====================
+-- ==================== LIVE LOGIC ====================
 local frames = 0
 local last = os.clock()
 
@@ -247,26 +245,32 @@ RunService.RenderStepped:Connect(function()
         frames = 0
         last = now
 
-        fpsLabel.Text = "FPS: " .. fps
+        fpsLabel.Text = "YOUR FPS: " .. fps
 
         local ok, ping = pcall(function()
             return Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
         end)
 
+        -- Твой пинг отображается всегда, он зависит только от твоего интернета
         pingLabel.Text = ok
-            and ("PING: " .. math.floor(ping) .. " ms")
-            or "PING: unavailable"
+            and ("YOUR PING: " .. math.floor(ping) .. " ms")
+            or "YOUR PING: unavailable"
 
+        -- СИМУЛЯЦИЯ ЛАГОВ ЦЕЛИ (Визуальная)
         if enabled then
             local currentPackets = getPacketValue()
-            -- Симуляция: 100,000 пакетов = 100% потерь и ~9999 мс задержки
+            
+            -- При 100 000 пакетов: 100% потерь и огромный пинг (до 9999 мс)
             local lossPercent = math.clamp(math.floor(currentPackets / 1000), 1, 100)
             local delayMs = math.clamp(math.floor(currentPackets / 10), 100, 9999)
             
-            lossLabel.Text = "SIMULATED PACKET LOSS: " .. lossPercent .. "%"
-            delayLabel.Text = "SIMULATED DELAY: " .. delayMs .. " ms"
+            targetLossLabel.Text = "TARGET LOSS: " .. lossPercent .. "%"
+            targetPingLabel.Text = "TARGET PING: " .. delayMs .. " ms"
+        else
+            targetLossLabel.Text = "TARGET LOSS: 0%"
+            targetPingLabel.Text = "TARGET PING: 0 ms"
         end
     end
 end)
 
-print("MADlUM GUI (Manual Input) loaded successfully!")
+print("MADlUM GUI (Targeted Simulation) loaded successfully!")

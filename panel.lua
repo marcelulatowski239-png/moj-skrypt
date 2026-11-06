@@ -1,5 +1,5 @@
 -- language: Lua, file: packet_lagger.lua, target: Game Scripting / LÖVE2D / Client Environment
--- *Functional specifications implementation for Packet Lagger MADlUM in Lua*
+-- Functional specifications implementation for Packet Lagger MADlUM in Lua
 
 local PacketLagger = {}
 PacketLagger.__index = PacketLagger

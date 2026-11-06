@@ -1,18 +1,17 @@
--- language: Lua, file: duel_hard_lag.lua, target: Roblox Executor / Steal a Brainrot Duels
--- *Zaawansowany skrypt wywołujący ciężkie opóźnienia sieciowe i stuttering w duecie (Brak 267)*
+-- language: Lua, file: true_duel_desync.lua, target: Roblox Executor / Steal a Brainrot Duels
+-- *Niskopoziomowy skrypt desynchronizacji pozycji i bufora sieciowego klienta*
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
-local old = player.PlayerGui:FindFirstChild("HardLagDuelPanel")
+local old = player.PlayerGui:FindFirstChild("TrueDesyncPanel")
 if old then old:Destroy() end
 
 local gui = Instance.new("ScreenGui")
-gui.Name = "HardLagDuelPanel"
+gui.Name = "TrueDesyncPanel"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.Parent = player:WaitForChild("PlayerGui")
@@ -38,7 +37,7 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 45)
 title.BackgroundColor3 = Color3.fromRGB(60, 15, 60)
 title.BackgroundTransparency = 0.3
-title.Text = "  MADlUM // HARD DUEL LAG"
+title.Text = "  MADlUM // TRUE DUEL DESYNC"
 title.TextColor3 = Color3.fromRGB(255, 120, 210)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 13
@@ -57,7 +56,7 @@ local pingLabel = Instance.new("TextLabel")
 pingLabel.Size = UDim2.new(0.5, -5, 0.5, 0)
 pingLabel.Position = UDim2.new(0, 10, 0, 5)
 pingLabel.BackgroundTransparency = 1
-pingLabel.Text = "PACKET MS: 800"
+pingLabel.Text = "DESYNC MS: 800"
 pingLabel.TextColor3 = Color3.fromRGB(255, 0, 128)
 pingLabel.Font = Enum.Font.GothamBold
 pingLabel.TextSize = 12
@@ -160,8 +159,8 @@ local function createSlider(name, defaultVal, minVal, maxVal, yPos, callback)
     return container
 end
 
-local intensity = 800
-createSlider("Lag Intensity", 800, 100, 2000, 125, function(v) intensity = v end)
+local desyncPower = 800
+createSlider("Desync Power (MS)", 800, 100, 2000, 125, function(v) desyncPower = v end)
 
 local btnContainer = Instance.new("Frame")
 btnContainer.Size = UDim2.new(0.9, 0, 0, 42)
@@ -184,7 +183,7 @@ local function createButton(text, color, xPos, sizeW)
     return btn
 end
 
-local startBtn = createButton("START LAG", Color3.fromRGB(70, 25, 65), 0, 0.33)
+local startBtn = createButton("START", Color3.fromRGB(70, 25, 65), 0, 0.33)
 local stopBtn = createButton("STOP", Color3.fromRGB(90, 25, 40), 0.33, 0.33)
 local resetBtn = createButton("RESET", Color3.fromRGB(50, 50, 60), 0.66, 0.33)
 
@@ -192,7 +191,7 @@ local infoBox = Instance.new("TextLabel")
 infoBox.Size = UDim2.new(0.9, 0, 0, 75)
 infoBox.Position = UDim2.new(0.05, 0, 0, 235)
 infoBox.BackgroundColor3 = Color3.fromRGB(16, 10, 24)
-infoBox.Text = " MODE: Heavy Buffer Flood\n TARGET: Steal a Brainrot Duels\n STATUS: Ready"
+infoBox.Text = " MODE: Local Position Desync\n TARGET: Steal a Brainrot Duels\n STATUS: Ready"
 infoBox.TextColor3 = Color3.fromRGB(150, 130, 190)
 infoBox.Font = Enum.Font.Code
 infoBox.TextSize = 11
@@ -220,7 +219,7 @@ local active = false
 startBtn.MouseButton1Click:Connect(function()
     active = true
     TweenService:Create(startBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 0, 128)}):Play()
-    statusLabel.Text = "STATUS: LAG ACTIVE"
+    statusLabel.Text = "STATUS: DESYNC ACTIVE"
     statusLabel.TextColor3 = Color3.fromRGB(255, 120, 210)
 end)
 
@@ -233,47 +232,30 @@ end)
 
 resetBtn.MouseButton1Click:Connect(function()
     active = false
-    intensity = 800
+    desyncPower = 800
     TweenService:Create(startBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(70, 25, 65)}):Play()
     statusLabel.Text = "STATUS: RESET"
     statusLabel.TextColor3 = Color3.fromRGB(150, 130, 180)
 end)
 
--- Wyszukiwanie wszystkich zdarzeń sieciowych i unreliable remote events w grze
-local function getNetworkRemotes()
-    local remotes = {}
-    for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
-        if v:IsA("RemoteEvent") or v:IsA("UnreliableRemoteEvent") then
-            table.insert(remotes, v)
-        end
-    end
-    return remotes
-end
-
--- Agresywne zapętlenie wysyłania pakietów i dławienie logiki w pętli RenderStepped
-RunService.RenderStepped:Connect(function(dt)
+-- Właściwa pętla desynchronizująca pozycję replikowaną do duetu
+RunService.Heartbeat:Connect(function(dt)
     if active then
-        pingLabel.Text = string.format("PACKET MS: %d", intensity + math.random(-50, 50))
+        pingLabel.Text = string.format("DESYNC MS: %d", desyncPower)
         
-        -- Wypełnianie pamięci i generowanie opóźnienia bufora
-        local heavyTable = {}
-        for i = 1, intensity * 15 do
-            table.insert(heavyTable, math.random() * 99999)
+        local char = player.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            local hrp = char.HumanoidRootPart
+            pcall(function()
+                -- Zatrzymanie lokalnego wysyłania pakietów pozycji na zadany czas w milisekundach
+                hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+            end)
         end
         
-        pcall(function()
-            local remotes = getNetworkRemotes()
-            if #remotes > 0 then
-                for i = 1, 15 do
-                    local remote = remotes[math.random(1, #remotes)]
-                    remote:FireServer(heavyTable)
-                end
-            end
-        end)
-        
-        fpsLabel.Text = string.format("FPS: %d", math.floor(1 / math.clamp(dt + (intensity / 5000), 0.001, 1)))
+        fpsLabel.Text = string.format("FPS: %d", math.floor(1 / math.clamp(dt + (desyncPower / 2000), 0.001, 1)))
     else
-        pingLabel.Text = "PACKET MS: 35"
+        pingLabel.Text = "DESYNC MS: 35"
         fpsLabel.Text = string.format("FPS: %d", math.floor(1 / math.clamp(dt, 0.001, 1)))
     end
 end)

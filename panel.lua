@@ -1,4 +1,4 @@
--- language: Lua, file: panel.lua, target: Roblox Client
+-- language: Lua, file: main.lua, target: Roblox Client
 -- MADlUM | PANEL LAGGER (Client Freeze Simulation)
 
 local RunService = game:GetService("RunService")

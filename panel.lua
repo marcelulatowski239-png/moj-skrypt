@@ -1,7 +1,6 @@
-
--- MADlUM | PACKET LAGGER GUI
--- Local diagnostic simulator
--- Movable window + Ping + FPS + Packet Loss simulation
+-- MADlUM | PACKET LAGGER GUI (Advanced)
+-- Local diagnostic simulator + Custom Lag Power Slider
+-- Movable window + Ping + FPS + Packet Loss & Delay simulation
 
 local Players = game:GetService("Players")
 local Stats = game:GetService("Stats")
@@ -19,8 +18,8 @@ gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local main = Instance.new("Frame")
-main.Size = UDim2.fromOffset(440, 340)
-main.Position = UDim2.new(0.5, -220, 0.5, -170)
+main.Size = UDim2.fromOffset(440, 380)
+main.Position = UDim2.new(0.5, -220, 0.5, -190)
 main.BackgroundColor3 = Color3.fromRGB(15, 17, 27)
 main.BorderSizePixel = 0
 main.Active = true
@@ -173,6 +172,88 @@ reset.MouseButton1Click:Connect(function()
     toggle.BackgroundColor3 = Color3.fromRGB(55, 75, 145)
     lossLabel.Text = "SIMULATED PACKET LOSS: 0%"
     delayLabel.Text = "SIMULATED DELAY: 0 ms"
+    lagValue = 500
+    if sliderFill then sliderFill.Size = UDim2.new(0.5, 0, 1, 0) end
+    if sliderBtn then sliderBtn.Position = UDim2.new(0.5, 0, 0, 0) end
+    if sliderText then sliderText.Text = "POWER: 500" end
+end)
+
+-- ==================== CUSTOM SLIDER ====================
+local sliderBg = create("Frame", {
+    Size = UDim2.new(1, -32, 0, 25),
+    Position = UDim2.fromOffset(16, 282),
+    BackgroundColor3 = Color3.fromRGB(35, 40, 60),
+    ClipsDescendants = true
+}, content)
+
+Instance.new("UICorner", sliderBg).CornerRadius = UDim.new(0, 7)
+
+local sliderFill = create("Frame", {
+    Size = UDim2.new(0.5, 0, 1, 0),
+    BackgroundColor3 = Color3.fromRGB(75, 110, 255),
+    BorderSizePixel = 0
+}, sliderBg)
+
+local sliderBtn = create("TextButton", {
+    Size = UDim2.fromOffset(16, 25),
+    Position = UDim2.new(0.5, -8, 0, 0),
+    BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+    Text = "",
+    AutoButtonColor = false
+}, sliderBg)
+
+local sliderText = create("TextLabel", {
+    Size = UDim2.new(1, 0, 0, 20),
+    Position = UDim2.fromOffset(0, -22),
+    BackgroundTransparency = 1,
+    Text = "POWER: 500",
+    TextColor3 = Color3.fromRGB(200, 210, 230),
+    Font = Enum.Font.Gotham,
+    TextSize = 12,
+    TextXAlignment = Enum.TextXAlignment.Left
+}, content)
+
+local lagValue = 500
+local isDraggingSlider = false
+
+local function updateSlider(input)
+    local mouseX = math.clamp(input.Position.X - sliderBg.AbsolutePosition.X, 0, sliderBg.AbsoluteSize.X)
+    local percent = mouseX / sliderBg.AbsoluteSize.X
+    sliderFill.Size = UDim2.new(percent, 0, 1, 0)
+    sliderBtn.Position = UDim2.new(percent, -8, 0, 0)
+    lagValue = math.floor(percent * 4900) + 100
+    sliderText.Text = "POWER: " .. lagValue
+end
+
+sliderBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        isDraggingSlider = true
+    end
+end)
+
+sliderBg.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        isDraggingSlider = true
+        updateSlider(input)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if isDraggingSlider and (
+        input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch
+    ) then
+        updateSlider(input)
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        isDraggingSlider = false
+    end
 end)
 
 minimize.MouseButton1Click:Connect(function()
@@ -180,11 +261,11 @@ minimize.MouseButton1Click:Connect(function()
     content.Visible = not minimized
     main.Size = minimized
         and UDim2.fromOffset(440, 50)
-        or UDim2.fromOffset(440, 340)
+        or UDim2.fromOffset(440, 380)
     minimize.Text = minimized and "+" or "-"
 end)
 
--- LIVE PING AND FPS
+-- ==================== LIVE PING, FPS & SIMULATION LOGIC ====================
 local frames = 0
 local last = os.clock()
 
@@ -208,10 +289,14 @@ RunService.RenderStepped:Connect(function()
             or "PING: unavailable"
 
         if enabled then
-            lossLabel.Text = "SIMULATED PACKET LOSS: 10%"
-            delayLabel.Text = "SIMULATED DELAY: 100 ms"
+            -- Динамическая симуляция на основе ползунка
+            local lossPercent = math.clamp(math.floor(lagValue / 100), 1, 100)
+            local delayMs = lagValue
+            
+            lossLabel.Text = "SIMULATED PACKET LOSS: " .. lossPercent .. "%"
+            delayLabel.Text = "SIMULATED DELAY: " .. delayMs .. " ms"
         end
     end
 end)
 
-print("MADlUM GUI loaded successfully!")
+print("MADlUM GUI (Advanced) loaded successfully!")

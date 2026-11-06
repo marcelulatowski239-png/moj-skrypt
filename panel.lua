@@ -1,5 +1,5 @@
--- language: Lua, file: panel.lua, target: Roblox Client / Modern UI Styling
--- *Zoptymalizowany, nowoczesny panel z płynnymi kolorami i dopracowanym interfejsem*
+-- language: Lua, file: panel.lua, target: Roblox Client / Neon Cyberpunk Theme
+-- *Nowoczesny, dynamiczny motyw w odcianiach głębokiego fioletu, neonowego błękitu i magenty*
 
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
@@ -18,64 +18,64 @@ gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.Parent = player:WaitForChild("PlayerGui")
 
--- Główny Kontener (Glassmorphism & Gradient)
+-- Główny Kontener (Cyberpunk Glow)
 local frame = Instance.new("Frame")
-frame.Size = UDim2.fromOffset(320, 400)
-frame.Position = UDim2.new(0.5, -160, 0.5, -200)
-frame.BackgroundColor3 = Color3.fromRGB(15, 17, 23)
+frame.Size = UDim2.fromOffset(320, 410)
+frame.Position = UDim2.new(0.5, -160, 0.5, -205)
+frame.BackgroundColor3 = Color3.fromRGB(13, 11, 20)
 frame.BackgroundTransparency = 0.05
 frame.BorderSizePixel = 0
 frame.Active = true
 frame.ClipsDescendants = true
 frame.Parent = gui
 
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 14)
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 16)
 
 local stroke = Instance.new("UIStroke", frame)
-stroke.Color = Color3.fromRGB(255, 75, 75)
-stroke.Thickness = 1.5
-stroke.Transparency = 0.3
+stroke.Color = Color3.fromRGB(160, 50, 255)
+stroke.Thickness = 2
+stroke.Transparency = 0.2
 
 local bgGradient = Instance.new("UIGradient")
 bgGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(22, 26, 38)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 12, 16))
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(24, 15, 38)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(8, 6, 14))
 })
-bgGradient.Rotation = 45
+bgGradient.Rotation = 135
 bgGradient.Parent = frame
 
 -- Nagłówek
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 45)
-title.BackgroundColor3 = Color3.fromRGB(25, 30, 42)
-title.BackgroundTransparency = 0.5
-title.Text = "  MADlUM // PERFORMANCE SUITE"
-title.TextColor3 = Color3.fromRGB(255, 90, 90)
+title.BackgroundColor3 = Color3.fromRGB(35, 20, 55)
+title.BackgroundTransparency = 0.4
+title.Text = "  MADlUM // CYBER PANEL"
+title.TextColor3 = Color3.fromRGB(210, 100, 255)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 13
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = frame
-Instance.new("UICorner", title).CornerRadius = UDim.new(0, 14)
+Instance.new("UICorner", title).CornerRadius = UDim.new(0, 16)
 
 -- Ping Display Box
 local pingLabel = Instance.new("TextLabel")
-pingLabel.Size = UDim2.new(0.9, 0, 0, 32)
+pingLabel.Size = UDim2.new(0.9, 0, 0, 34)
 pingLabel.Position = UDim2.new(0.05, 0, 0, 55)
-pingLabel.BackgroundColor3 = Color3.fromRGB(20, 24, 33)
+pingLabel.BackgroundColor3 = Color3.fromRGB(20, 14, 32)
 pingLabel.Text = "SERVER PING: -- ms"
-pingLabel.TextColor3 = Color3.fromRGB(120, 210, 255)
+pingLabel.TextColor3 = Color3.fromRGB(100, 220, 255)
 pingLabel.Font = Enum.Font.GothamBold
 pingLabel.TextSize = 12
 pingLabel.Parent = frame
-Instance.new("UICorner", pingLabel).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", pingLabel).CornerRadius = UDim.new(0, 10)
 
 -- Input Box
 local inputFrame = Instance.new("Frame")
 inputFrame.Size = UDim2.new(0.9, 0, 0, 44)
-inputFrame.Position = UDim2.new(0.05, 0, 0, 97)
-inputFrame.BackgroundColor3 = Color3.fromRGB(20, 24, 33)
+inputFrame.Position = UDim2.new(0.05, 0, 0, 100)
+inputFrame.BackgroundColor3 = Color3.fromRGB(20, 14, 32)
 inputFrame.Parent = frame
-Instance.new("UICorner", inputFrame).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", inputFrame).CornerRadius = UDim.new(0, 10)
 
 local packetInput = Instance.new("TextBox")
 packetInput.Size = UDim2.new(1, -20, 1, 0)
@@ -83,8 +83,8 @@ packetInput.Position = UDim2.new(0, 10, 0, 0)
 packetInput.BackgroundTransparency = 1
 packetInput.Text = "100000"
 packetInput.PlaceholderText = "Wpisz ilość (1 - 500000)"
-packetInput.TextColor3 = Color3.fromRGB(240, 240, 240)
-packetInput.PlaceholderColor3 = Color3.fromRGB(100, 100, 110)
+packetInput.TextColor3 = Color3.fromRGB(240, 240, 255)
+packetInput.PlaceholderColor3 = Color3.fromRGB(110, 95, 140)
 packetInput.Font = Enum.Font.GothamMedium
 packetInput.TextSize = 13
 packetInput.TextXAlignment = Enum.TextXAlignment.Center
@@ -101,21 +101,21 @@ end)
 -- Auto-Chaos Button
 local chaosBtn = Instance.new("TextButton")
 chaosBtn.Size = UDim2.new(0.9, 0, 0, 38)
-chaosBtn.Position = UDim2.new(0.05, 0, 0, 151)
-chaosBtn.BackgroundColor3 = Color3.fromRGB(45, 30, 65)
+chaosBtn.Position = UDim2.new(0.05, 0, 0, 155)
+chaosBtn.BackgroundColor3 = Color3.fromRGB(45, 15, 60)
 chaosBtn.Text = "AUTO-CHAOS: OFF"
-chaosBtn.TextColor3 = Color3.fromRGB(210, 160, 255)
+chaosBtn.TextColor3 = Color3.fromRGB(255, 130, 210)
 chaosBtn.Font = Enum.Font.GothamBold
 chaosBtn.TextSize = 12
 chaosBtn.AutoButtonColor = false
 chaosBtn.Parent = frame
-Instance.new("UICorner", chaosBtn).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", chaosBtn).CornerRadius = UDim.new(0, 10)
 
 local chaosEnabled = false
 chaosBtn.MouseButton1Click:Connect(function()
     chaosEnabled = not chaosEnabled
     TweenService:Create(chaosBtn, TweenInfo.new(0.2), {
-        BackgroundColor3 = chaosEnabled and Color3.fromRGB(110, 40, 170) or Color3.fromRGB(45, 30, 65)
+        BackgroundColor3 = chaosEnabled and Color3.fromRGB(140, 20, 120) or Color3.fromRGB(45, 15, 60)
     }):Play()
     chaosBtn.Text = chaosEnabled and "AUTO-CHAOS: ON" or "AUTO-CHAOS: OFF"
 end)
@@ -123,23 +123,23 @@ end)
 -- Main Toggle Button
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Size = UDim2.new(0.9, 0, 0, 48)
-toggleBtn.Position = UDim2.new(0.05, 0, 0, 199)
-toggleBtn.BackgroundColor3 = Color3.fromRGB(40, 45, 55)
+toggleBtn.Position = UDim2.new(0.05, 0, 0, 204)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(25, 35, 60)
 toggleBtn.Text = "ACTIVATE LAG"
 toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 toggleBtn.Font = Enum.Font.GothamBold
 toggleBtn.TextSize = 14
 toggleBtn.AutoButtonColor = false
 toggleBtn.Parent = frame
-Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 10)
 
 -- Status Label
 local statusLabel = Instance.new("TextLabel")
 statusLabel.Size = UDim2.new(0.9, 0, 0, 25)
-statusLabel.Position = UDim2.new(0.05, 0, 0, 257)
+statusLabel.Position = UDim2.new(0.05, 0, 0, 263)
 statusLabel.BackgroundTransparency = 1
 statusLabel.Text = "STATUS: IDLE"
-statusLabel.TextColor3 = Color3.fromRGB(120, 120, 130)
+statusLabel.TextColor3 = Color3.fromRGB(130, 115, 160)
 statusLabel.Font = Enum.Font.GothamMedium
 statusLabel.TextSize = 12
 statusLabel.Parent = frame
@@ -147,10 +147,10 @@ statusLabel.Parent = frame
 -- Credits
 local credits = Instance.new("TextLabel")
 credits.Size = UDim2.new(1, 0, 0, 20)
-credits.Position = UDim2.new(0, 0, 1, -24)
+credits.Position = UDim2.new(0, 0, 1, -26)
 credits.BackgroundTransparency = 1
 credits.Text = "crafted by R9K"
-credits.TextColor3 = Color3.fromRGB(70, 70, 80)
+credits.TextColor3 = Color3.fromRGB(80, 60, 110)
 credits.Font = Enum.Font.Gotham
 credits.TextSize = 10
 credits.Parent = frame
@@ -168,10 +168,10 @@ end
 local function toggleLag()
     enabled = not enabled
     if enabled then
-        TweenService:Create(toggleBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(200, 50, 50)}):Play()
+        TweenService:Create(toggleBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(220, 40, 90)}):Play()
         toggleBtn.Text = "STOP LAG"
         statusLabel.Text = "STATUS: ACTIVE"
-        statusLabel.TextColor3 = Color3.fromRGB(255, 90, 90)
+        statusLabel.TextColor3 = Color3.fromRGB(255, 80, 120)
 
         lagConnection = RunService.Stepped:Connect(function()
             local packets = getPacketValue()
@@ -188,10 +188,10 @@ local function toggleLag()
         end)
     else
         if lagConnection then lagConnection:Disconnect() end
-        TweenService:Create(toggleBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 45, 55)}):Play()
+        TweenService:Create(toggleBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(25, 35, 60)}):Play()
         toggleBtn.Text = "ACTIVATE LAG"
         statusLabel.Text = "STATUS: IDLE"
-        statusLabel.TextColor3 = Color3.fromRGB(120, 120, 130)
+        statusLabel.TextColor3 = Color3.fromRGB(130, 115, 160)
     end
 end
 

@@ -85,7 +85,7 @@ packetInput:GetPropertyChangedSignal("Text"):Connect(function()
     end
 end)
 
--- ==================== AUTO-CHAOS (NOWE) ====================
+-- ==================== AUTO-CHAOS ====================
 local chaosBtn = Instance.new("TextButton")
 chaosBtn.Size = UDim2.new(0.9, 0, 0, 35)
 chaosBtn.Position = UDim2.new(0.05, 0, 0, 130)
@@ -146,7 +146,6 @@ credits.Parent = frame
 -- ==================== LOGIKA ====================
 local enabled = false
 local lagConnection
-local currentPackets = 100000
 
 local function getPacketValue()
     local num = tonumber(packetInput.Text)
@@ -165,19 +164,16 @@ local function toggleLag()
         lagConnection = RunService.RenderStepped:Connect(function()
             local packets = getPacketValue()
             
-            -- Auto-chaos modyfikuje ilość pakietów w locie
             if chaosEnabled then
                 packets = math.random(1000, 500000)
                 packetInput.Text = tostring(packets)
             end
             
-            -- Główna pętla obciążająca procesor
             local x = 0
             for i = 1, packets do
                 x = math.sin(i) * math.cos(i) + math.sqrt(i)
             end
             
-            -- Losowe mikrozacięcia (im więcej pakietów, tym częstsze)
             if math.random(1, 100) > (90 - (packets / 10000)) then
                 task.wait(0.05)
             end

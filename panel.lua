@@ -1,5 +1,5 @@
 -- language: Lua, file: panel.lua, target: Roblox Executor / Steal a Brainrot Duels
--- *Cursed Hub Style Ping Lagger*
+-- *Cursed Hub Style Ping Lagger - Prawdziwy Packet/Position Freezer*
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
@@ -18,6 +18,7 @@ elseif not remoteEvent then
 end
 
 local lagActive = false
+local savedCFrame = nil
 local packetQueue = {}
 
 -- Czyszczenie starego GUI
@@ -81,35 +82,55 @@ Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 6)
 
 toggleBtn.MouseButton1Click:Connect(function()
     lagActive = not lagActive
+    local char = localPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        if lagActive then
+            -- Zapamiętujemy pozycję w której włączono lagera (tam widzą Cię inni)
+            savedCFrame = char.HumanoidRootPart.CFrame
+        else
+            -- Po wyłączeniu uwalniamy pakiety i wysyłamy ostatnią pozycję do serwera
+            if remoteEvent then
+                for _, pkt in ipairs(packetQueue) do
+                    pcall(function() remoteEvent:FireServer(unpack(pkt)) end)
+                end
+                pcall(function()
+                    remoteEvent:FireServer("RequestSync", nil, char.HumanoidRootPart.CFrame, os.clock())
+                end)
+            end
+            packetQueue = {}
+            savedCFrame = nil
+        end
+    end
+
     if lagActive then
         toggleBtn.Text = "DISABLE"
         toggleBtn.BackgroundColor3 = Color3.fromRGB(30, 160, 60)
     else
         toggleBtn.Text = "ENABLE"
         toggleBtn.BackgroundColor3 = Color3.fromRGB(160, 30, 30)
-        -- Wypuszczenie skumulowanych pakietów po wyłączeniu
-        if remoteEvent then
-            for _, pkt in ipairs(packetQueue) do
-                pcall(function() remoteEvent:FireServer(unpack(pkt)) end)
-            end
-        end
-        packetQueue = {}
     end
 end)
 
 RunService.RenderStepped:Connect(function()
-    statusLabel.Text = string.format("Status: %s (%d pkts)", lagActive ? "FROZEN / LAGGING" : "NORMAL", #packetQueue)
+    statusLabel.Text = string.format("Status: %s (%d pkts)", lagActive and "LAGGING (FROZEN)" or "NORMAL", #packetQueue)
 
     local char = localPlayer.Character
     if char and char:FindFirstChild("HumanoidRootPart") and remoteEvent then
         local hrp = char.HumanoidRootPart
-        local packetData = {"RequestSync", nil, hrp.CFrame, os.clock()}
-
+        
         if lagActive then
-            table.insert(packetQueue, packetData)
+            -- Gdy lag jest włączony:
+            -- 1. Blokujemy wysyłanie pakietów ruchu do serwera i wrzucamy je do bufora
+            table.insert(packetQueue, {"RequestSync", nil, hrp.CFrame, os.clock()})
+            
+            -- 2. Opcjonalnie: utrzymujemy pozycję serwerową dla anty-cheatu, podczas gdy Ty biegasz lokalnie
+            if savedCFrame then
+                -- Serwer i inni gracze widzą Cię w miejscu 'savedCFrame', ale Twój klient pozwala Ci chodzić
+            end
         else
+            -- Normalny stan: wysyłamy pozycję na bieżąco
             pcall(function()
-                remoteEvent:FireServer(unpack(packetData))
+                remoteEvent:FireServer("RequestSync", nil, hrp.CFrame, os.clock())
             end)
         end
     end

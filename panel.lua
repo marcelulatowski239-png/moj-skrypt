@@ -1,5 +1,5 @@
--- language: Lua, file: panel.lua, target: Roblox Executor / Ping Lagger & Packet Freezer
--- *Zaawansowany panel pinger/lagger z buforowaniem pakietów wychodzących*
+-- language: Lua, file: panel.lua, target: Roblox Executor / True Local Freeze Lagger
+-- *Właściwy Lagger Fizyczny i Sieciowy dla Roblox*
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
@@ -17,7 +17,7 @@ elseif not remoteEvent then
     remoteEvent = ReplicatedStorage:WaitForChild("SyncEvent", 5)
 end
 
-local lagMs = 500 -- domyślny lag pakietów w ms
+local lagMs = 500
 local lagActive = false
 local outboundPacketBuffer = {}
 
@@ -51,7 +51,7 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 45)
 title.BackgroundColor3 = Color3.fromRGB(60, 12, 20)
 title.BackgroundTransparency = 0.3
-title.Text = "  MADlUM // PACKET LAGGER v2"
+title.Text = "  MADlUM // TRUE FREEZE LAGGER"
 title.TextColor3 = Color3.fromRGB(255, 90, 90)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 13
@@ -166,7 +166,6 @@ releaseBtn.MouseButton1Click:Connect(function()
     outboundPacketBuffer = {}
 end)
 flushBtn.MouseButton1Click:Connect(function()
-    -- Natychmiastowe wypuszczenie wszystkich skumulowanych pakietów
     if remoteEvent then
         for _, pkt in ipairs(outboundPacketBuffer) do
             pcall(function()
@@ -181,7 +180,7 @@ local infoBox = Instance.new("TextLabel")
 infoBox.Size = UDim2.new(0.9, 0, 0, 55)
 infoBox.Position = UDim2.new(0.05, 0, 0, 255)
 infoBox.BackgroundColor3 = Color3.fromRGB(16, 12, 22)
-infoBox.Text = " STATUS: Lagger Ready\n MODE: Outbound Packet Buffer"
+infoBox.Text = " STATUS: Ready\n MODE: Physics & Packet Freeze"
 infoBox.TextColor3 = Color3.fromRGB(190, 130, 130)
 infoBox.Font = Enum.Font.Code
 infoBox.TextSize = 11
@@ -203,43 +202,47 @@ credits.Font = Enum.Font.Gotham
 credits.TextSize = 10
 credits.Parent = frame
 
--- Główna pętla zatrzymująca i uwalniająca pakiety wychodzące
 RunService.RenderStepped:Connect(function(dt)
     local fps = math.floor(1 / dt)
     local packetsInQueue = #outboundPacketBuffer
     
     statsLabel.Text = string.format("FPS: %d | QUEUE: %d PKTS\nLAG: %d ms | STATE: %s", 
-        fps, packetsInQueue, lagMs, lagActive and "FROZEN (LAGGING)" : "NORMAL")
+        fps, packetsInQueue, lagMs, lagActive and "FROZEN" or "NORMAL")
 
     local now = os.clock()
-
-    -- Symulacja wysyłania pakietu ruchu z ograniczeniem częstotliwości (20 Hz)
-    if remoteEvent and localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        local hrp = localPlayer.Character.HumanoidRootPart
-        local packetData = {"RequestSync", nil, hrp.CFrame, now}
+    local char = localPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Humanoid") then
+        local hrp = char.HumanoidRootPart
+        local humanoid = char.Humanoid
 
         if lagActive then
-            -- Zatrzymujemy pakiet w buforze lokalnym zamiast wysyłać do serwera
+            -- Zamrożenie fizyki postaci na ekranie (blokada ruchu i prędkości)
+            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+            
+            -- Zatrzymanie pakietów wychodzących w buforze
+            local packetData = {"RequestSync", nil, hrp.CFrame, now}
             table.insert(outboundPacketBuffer, {time = now, data = packetData})
         else
-            -- Normalny tryb / wypuszczanie zaległych pakietów z opóźnieniem
-            pcall(function()
-                remoteEvent:FireServer(unpack(packetData))
-            end)
+            if remoteEvent then
+                pcall(function()
+                    remoteEvent:FireServer("RequestSync", nil, hrp.CFrame, now)
+                end)
+            end
 
-            -- Wypuszczanie pakietów z bufora po upłynięciu lagMs
             local delaySec = lagMs / 1000
             while #outboundPacketBuffer > 0 and (now - outboundPacketBuffer[1].time) >= delaySec do
                 local pkt = table.remove(outboundPacketBuffer, 1)
-                pcall(function()
-                    remoteEvent:FireServer(unpack(pkt.data))
-                end)
+                if remoteEvent then
+                    pcall(function()
+                        remoteEvent:FireServer(unpack(pkt.data))
+                    end)
+                end
             end
         end
     end
 end)
 
--- Przesuwanie okna myszką
 local dragging, dragStart, startPos
 title.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then

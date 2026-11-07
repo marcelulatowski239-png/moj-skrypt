@@ -1,5 +1,5 @@
 -- language: Lua, file: panel.lua, target: Roblox Executor / Steal a Brainrot Duels
--- *Panel diagnostyczny i system buforowania replikacji pozycji dla symulacji pingu*
+-- *Panel diagnostyczny z trybem samotestowania i buforowaniem replikacji*
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
@@ -8,9 +8,13 @@ local UserInputService = game:GetService("UserInputService")
 
 local localPlayer = Players.LocalPlayer
 
-local remoteEvent = ReplicatedStorage:WaitForChild("SyncEvent", 5)
-if not remoteEvent then
-    warn("[-] SyncEvent not found in ReplicatedStorage!")
+local remoteEvent = ReplicatedStorage:FindFirstChild("SyncEvent")
+if not remoteEvent and RunService:IsServer() then
+    remoteEvent = Instance.new("RemoteEvent")
+    remoteEvent.Name = "SyncEvent"
+    remoteEvent.Parent = ReplicatedStorage
+elseif not remoteEvent then
+    remoteEvent = ReplicatedStorage:WaitForChild("SyncEvent", 5)
 end
 
 local simulatedDelayMs = 300
@@ -47,7 +51,7 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 45)
 title.BackgroundColor3 = Color3.fromRGB(50, 15, 65)
 title.BackgroundTransparency = 0.3
-title.Text = "  MADlUM // PING LAGGER PANEL"
+title.Text = "  MADlUM // DUAL BUFFER PANEL"
 title.TextColor3 = Color3.fromRGB(255, 120, 210)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 13
@@ -170,7 +174,7 @@ local infoBox = Instance.new("TextLabel")
 infoBox.Size = UDim2.new(0.9, 0, 0, 55)
 infoBox.Position = UDim2.new(0.05, 0, 0, 255)
 infoBox.BackgroundColor3 = Color3.fromRGB(16, 10, 24)
-infoBox.Text = " STATUS: Running\n TARGET: Server-Synced Buffer"
+infoBox.Text = " STATUS: Running\n MODE: Auto / Solo Buffer Active"
 infoBox.TextColor3 = Color3.fromRGB(150, 130, 190)
 infoBox.Font = Enum.Font.Code
 infoBox.TextSize = 11
@@ -201,7 +205,7 @@ if remoteEvent then
             return
         end
 
-        if action == "UpdatePosition" and targetPlayer and targetPlayer ~= localPlayer then
+        if action == "UpdatePosition" and targetPlayer then
             if not positionBuffers[targetPlayer] then
                 positionBuffers[targetPlayer] = {}
             end
@@ -230,6 +234,17 @@ RunService.RenderStepped:Connect(function(dt)
             pcall(function()
                 remoteEvent:FireServer("RequestSync", nil, char.HumanoidRootPart.CFrame, now)
             end)
+            
+            -- TRYB SOLO: Jeśli jesteś sam, buforuj własną postać, żeby widzieć opóźnienie od razu
+            if #Players:GetPlayers() <= 1 then
+                if not positionBuffers[localPlayer] then
+                    positionBuffers[localPlayer] = {}
+                end
+                table.insert(positionBuffers[localPlayer], {
+                    cframe = char.HumanoidRootPart.CFrame,
+                    time = now
+                })
+            end
         end
     end
 

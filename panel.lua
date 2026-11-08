@@ -1,18 +1,19 @@
--- language: Lua, file: panel.lua, target: Roblox Executor / GHOST Hub Ultimate
--- *Complete ADAPT / GHOST Hub implementation matching the full feature set*
+-- language: Lua, file: panel.lua, target: Roblox Executor / GHOST Hub Ultimate v8
+-- *Complete GHOST Hub system with working tabs, ground raycast TP, keybinds & combat engine*
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
 
 local localPlayer = Players.LocalPlayer
 local remoteEvent = ReplicatedStorage:FindFirstChild("SyncEvent") or ReplicatedStorage:FindFirstChild("RemoteEvent")
 
--- Konfiguracja huba i wszystkich stanów z menu
+-- Pełna konfiguracja huba i stanów
 local config = {
-    -- Ruch / Speed
+    -- Ruch
     NormalSpeed = 16,
     CarrySpeed = 16,
     LaggerNormalSpeed = 45,
@@ -47,7 +48,7 @@ local config = {
     Confuser = false,
     AutoConfuser = false,
 
-    -- Keybinds (KBM / CTRL)
+    -- Keybinds
     KeyLaggerMode = Enum.KeyCode.E,
     KeyDrop = Enum.KeyCode.Unknown,
     KeyTpDown = Enum.KeyCode.Q,
@@ -76,7 +77,7 @@ local config = {
 
 local packetQueue = {}
 
--- Czyszczenie starych GUI
+-- Czyszczenie starych instancji GUI
 for _, guiName in ipairs({"GhostHubGui", "AdaptHubGui", "CursedHubLagger", "DuelLatencyPanel"}) do
     local old = localPlayer.PlayerGui:FindFirstChild(guiName)
     if old then old:Destroy() end
@@ -88,7 +89,7 @@ gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.Parent = localPlayer:WaitForChild("PlayerGui")
 
--- Główne okno
+-- Główne okno panelu
 local frame = Instance.new("Frame")
 frame.Size = UDim2.fromOffset(440, 580)
 frame.Position = UDim2.new(0.5, -220, 0.5, -290)
@@ -105,7 +106,7 @@ stroke.Color = Color3.fromRGB(140, 50, 255)
 stroke.Thickness = 2
 stroke.Transparency = 0.15
 
--- Górny nagłówek
+-- Nagłówek górny (Zmieniony na GHOST)
 local topBar = Instance.new("Frame")
 topBar.Size = UDim2.new(1, 0, 0, 60)
 topBar.BackgroundTransparency = 1
@@ -115,7 +116,7 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(0.6, 0, 1, 0)
 title.Position = UDim2.new(0, 20, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "ADAPT"
+title.Text = "GHOST"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Font = Enum.Font.GothamBlack
 title.TextSize = 26
@@ -133,7 +134,7 @@ statusIndicator.TextSize = 12
 statusIndicator.TextXAlignment = Enum.TextXAlignment.Right
 statusIndicator.Parent = topBar
 
--- Zakładki systemu
+-- Zakładki systemu interfejsu
 local pages = {}
 local pageNames = {"Ruch", "COMBAT", "KBM", "CTRL", "VISUAL", "USTAWIENIA"}
 
@@ -144,7 +145,7 @@ for _, name in ipairs(pageNames) do
     p.Position = UDim2.new(0, 10, 0, 65)
     p.BackgroundTransparency = 1
     p.BorderSizePixel = 0
-    p.CanvasSize = UDim2.new(0, 0, 0, 850)
+    p.CanvasSize = UDim2.new(0, 0, 0, 950)
     p.ScrollBarThickness = 4
     p.ScrollBarImageColor3 = Color3.fromRGB(140, 50, 255)
     p.Visible = (name == "Ruch")
@@ -157,7 +158,7 @@ for _, name in ipairs(pageNames) do
     pages[name] = p
 end
 
--- Komponenty UI
+-- Generatory komponentów GUI
 local function createSection(parent, text)
     local lbl = Instance.new("TextLabel")
     lbl.Size = UDim2.new(1, 0, 0, 24)
@@ -320,7 +321,7 @@ createToggle(pages["Ruch"], "Lagger Manual (Bind pod E)", config.LaggerActive, f
     end
 end)
 
-createSection(pages["Ruch"], "TP Down")
+createSection(pages["Ruch"], "TP Down (Na ziemię)")
 createToggle(pages["Ruch"], "TP Down (Klawisz Q)", config.TpDown, function(v) config.TpDown = v end)
 createToggle(pages["Ruch"], "Auto TP Down", config.AutoTpDown, function(v) config.AutoTpDown = v end)
 createInputBox(pages["Ruch"], "Auto TP Height", config.AutoTpHeight, function(v) config.AutoTpHeight = v end)
@@ -362,7 +363,7 @@ createToggle(pages["COMBAT"], "Confuser", config.Confuser, function(v) config.Co
 createToggle(pages["COMBAT"], "Auto Confuser", config.AutoConfuser, function(v) config.AutoConfuser = v end)
 
 
--- === ZAKŁADKA: KBM (Keybinds) ===
+-- === ZAKŁADKA: KBM ===
 createSection(pages["KBM"], "Combat Keybinds")
 createKeybindBox(pages["KBM"], "Lagger Mode Key", config.KeyLaggerMode, function(k) config.KeyLaggerMode = k end)
 createKeybindBox(pages["KBM"], "Drop Key", config.KeyDrop, function(k) config.KeyDrop = k end)
@@ -395,7 +396,7 @@ createToggle(pages["VISUAL"], "Potato Graphics", config.PotatoGraphics, function
 createToggle(pages["VISUAL"], "FOV Change", config.FovChange, function(v) config.FovChange = v end)
 createInputBox(pages["VISUAL"], "FOV Value", config.FovValue, function(v)
     config.FovValue = v
-    if config.FovChange then workspace.CurrentCamera.FieldOfView = v end
+    if config.FovChange then Workspace.CurrentCamera.FieldOfView = v end
 end)
 
 
@@ -444,15 +445,29 @@ for i, name in ipairs(pageNames) do
     end)
 end
 
--- TP Down funkcja
+-- Precyzyjny TP Down na powierzchnię ziemi (Raycast)
 local function doTpDown()
     local char = localPlayer.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
-        char.HumanoidRootPart.CFrame = char.HumanoidRootPart.CFrame - Vector3.new(0, 25, 0)
+        local hrp = char.HumanoidRootPart
+        local rayOrigin = hrp.Position + Vector3.new(0, 5, 0)
+        local rayDirection = Vector3.new(0, -400, 0)
+        
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+        raycastParams.FilterDescendantsInstances = {char}
+        
+        local raycastResult = Workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+        
+        if raycastResult then
+            hrp.CFrame = CFrame.new(raycastResult.Position + Vector3.new(0, 3, 0))
+        else
+            hrp.CFrame = hrp.CFrame - Vector3.new(0, 20, 0)
+        end
     end
 end
 
--- Keybind listener
+-- Obsługa skrótów klawiszowych (Keybinds)
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     
@@ -471,7 +486,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- Pętla główna (Prędkość, pakiety laggra, bat aimbot)
+-- Pętla wykonawcza (Ruch, Pakiety Laggra, Bat Aimbot)
 RunService.RenderStepped:Connect(function()
     local char = localPlayer.Character
     if not char then return end
@@ -493,7 +508,7 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- Bat Aimbot
+    -- Bat Aimbot / Namierzanie najbliższego przeciwnika
     if config.BatAimbot and hrp then
         local closestPlayer = nil
         local shortestDist = math.huge
@@ -509,7 +524,7 @@ RunService.RenderStepped:Connect(function()
             end
         end
 
-        if closestPlayer and shortestDist < 40 then
+        if closestPlayer and shortestDist < 50 then
             local targetHrp = closestPlayer.Character.HumanoidRootPart
             hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(targetHrp.Position.X, hrp.Position.Y, targetHrp.Position.Z))
         end
@@ -526,7 +541,7 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- Przesuwanie okna
+-- Przesuwanie okna myszką / dotykiem
 local dragging, dragStart, startPos
 topBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then

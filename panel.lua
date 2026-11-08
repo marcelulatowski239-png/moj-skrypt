@@ -1,5 +1,5 @@
--- language: Lua, file: ghost_packet_lagger.lua, target: Roblox Executor / GHOST Hub
--- *GHOST Packet Lagger Widget (Pełny reset i nowy interfejs)*
+-- language: Lua, file: ghost_packet_lagger_gui.lua, target: Roblox Executor / GHOST Hub
+-- *GHOST Packet Lagger Widget (Pełny, nowoczesny panel ze zdjęcia)*
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -10,7 +10,7 @@ local TweenService = game:GetService("TweenService")
 local localPlayer = Players.LocalPlayer
 local remoteEvent = ReplicatedStorage:FindFirstChild("SyncEvent") or ReplicatedStorage:FindFirstChild("RemoteEvent")
 
--- Całkowite czyszczenie starych GUI o każdej możliwej nazwie
+-- Całkowite czyszczenie wszystkich starych GUI i śmieci z ekranu
 local playerGui = localPlayer:WaitForChild("PlayerGui")
 for _, name in ipairs({"GhostPacketLaggerGui", "ZivaPacketLaggerGui", "GhostHubGui", "AdaptHubGui", "CursedHubLagger"}) do
     local old = playerGui:FindFirstChild(name)
@@ -21,7 +21,7 @@ local LaggerState = {
     Active = false,
     Power = 10000,
     Keybind = Enum.KeyCode.G,
-    MaxPackets = 20000
+    MaxPackets = 30000
 }
 
 local packetQueue = {}
@@ -31,6 +31,7 @@ screenGui.Name = "GhostPacketLaggerGui"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
+-- Główne okno panelu (Duży, piękny fioletowy box jak na Twoim zdjęciu)
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.fromOffset(300, 310)
 mainFrame.Position = UDim2.new(0.5, -150, 0.5, -155)
@@ -43,10 +44,11 @@ mainFrame.Parent = screenGui
 Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 16)
 
 local stroke = Instance.new("UIStroke", mainFrame)
-stroke.Color = Color3.fromRGB(120, 50, 200)
+stroke.Color = Color3.fromRGB(130, 60, 220)
 stroke.Thickness = 2
-stroke.Transparency = 0.3
+stroke.Transparency = 0.2
 
+-- Tytuł: GHOST PACKET LAGGER
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, -30, 0, 35)
 titleLabel.Position = UDim2.new(0, 16, 0, 14)
@@ -58,17 +60,19 @@ titleLabel.TextSize = 16
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 titleLabel.Parent = mainFrame
 
+-- Etykieta "power"
 local powerTitle = Instance.new("TextLabel")
 powerTitle.Size = UDim2.new(1, -30, 0, 20)
 powerTitle.Position = UDim2.new(0, 16, 0, 52)
 powerTitle.BackgroundTransparency = 1
 powerTitle.Text = "power"
-powerTitle.TextColor3 = Color3.fromRGB(200, 180, 230)
+powerTitle.TextColor3 = Color3.fromRGB(210, 190, 240)
 powerTitle.Font = Enum.Font.GothamMedium
 powerTitle.TextSize = 13
 powerTitle.TextXAlignment = Enum.TextXAlignment.Left
 powerTitle.Parent = mainFrame
 
+-- Pole tekstowe Power (10000)
 local powerBox = Instance.new("TextBox")
 powerBox.Size = UDim2.fromOffset(210, 42)
 powerBox.Position = UDim2.new(0, 16, 0, 76)
@@ -80,6 +84,7 @@ powerBox.Text = tostring(LaggerState.Power)
 powerBox.Parent = mainFrame
 Instance.new("UICorner", powerBox).CornerRadius = UDim.new(0, 8)
 
+-- Przyciski minus i plus obok pola power
 local minusBtn = Instance.new("TextButton")
 minusBtn.Size = UDim2.fromOffset(32, 20)
 minusBtn.Position = UDim2.new(0, 236, 0, 76)
@@ -117,17 +122,19 @@ powerBox.FocusLost:Connect(function()
     if val then LaggerState.Power = val else powerBox.Text = tostring(LaggerState.Power) end
 end)
 
+-- Etykieta "keybind"
 local keybindTitle = Instance.new("TextLabel")
 keybindTitle.Size = UDim2.new(1, -30, 0, 20)
 keybindTitle.Position = UDim2.new(0, 16, 0, 132)
 keybindTitle.BackgroundTransparency = 1
 keybindTitle.Text = "keybind"
-keybindTitle.TextColor3 = Color3.fromRGB(200, 180, 230)
+keybindTitle.TextColor3 = Color3.fromRGB(210, 190, 240)
 keybindTitle.Font = Enum.Font.GothamMedium
 keybindTitle.TextSize = 13
 keybindTitle.TextXAlignment = Enum.TextXAlignment.Left
 keybindTitle.Parent = mainFrame
 
+-- Przycisk Keybind (G)
 local keybindBtn = Instance.new("TextButton")
 keybindBtn.Size = UDim2.fromOffset(268, 42)
 keybindBtn.Position = UDim2.new(0, 16, 0, 156)
@@ -153,6 +160,7 @@ UserInputService.InputBegan:Connect(function(input)
     end
 end)
 
+-- Przycisk statusu (Wyłączone / Włączone)
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Size = UDim2.fromOffset(268, 52)
 toggleBtn.Position = UDim2.new(0, 16, 0, 222)
@@ -197,6 +205,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
+-- Pętla buforowania i wysyłania pakietów
 RunService.RenderStepped:Connect(function()
     local char = localPlayer.Character
     if not char then return end

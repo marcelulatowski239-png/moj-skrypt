@@ -1,221 +1,259 @@
--- language: Lua, file: ghost_packet_lagger_minimal.lua, target: Roblox Executor / GHOST Hub
--- *GHOST Packet Lagger - Minimalist Dark Cyber / Neon Violet Variant*
+-- GHOST.SYS | panel.lua
+-- Local Packet Lag Simulation
+-- Roblox Client / LocalScript
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
-local localPlayer = Players.LocalPlayer
-local playerGui = localPlayer:WaitForChild("PlayerGui")
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
 
-for _, name in ipairs({"GhostPacketLaggerGui", "ZivaPacketLaggerGui"}) do
-    local old = playerGui:FindFirstChild(name)
-    if old then old:Destroy() end
-end
-
-local LaggerState = {
-    Active = false,
-    Power = 10000,
+-- CONFIG
+local Config = {
+    Power = 1000,
+    MinPower = 100,
+    MaxPower = 5000,
+    Step = 100,
     Keybind = Enum.KeyCode.F
 }
 
-local buffer = {}
+local State = {
+    Active = false,
+    Listening = false,
+    Buffer = {}
+}
 
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "GhostPacketLaggerGui"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = playerGui
+-- CLEANUP
+local old = PlayerGui:FindFirstChild("GhostPacketLaggerGui")
+if old then old:Destroy() end
 
--- Nowy, bardziej agresywny i minimalistyczny design (Dark Cyber / Tech)
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.fromOffset(280, 270)
-mainFrame.Position = UDim2.new(0.5, -140, 0.5, -135)
-mainFrame.BackgroundColor3 = Color3.fromRGB(12, 10, 18)
-mainFrame.BorderSizePixel = 0
-mainFrame.Active = true
-mainFrame.Draggable = true
-mainFrame.Parent = screenGui
+local oldGhost = workspace:FindFirstChild("GhostLocalMarker")
+if oldGhost then oldGhost:Destroy() end
 
-Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 8)
+-- GUI
+local Gui = Instance.new("ScreenGui")
+Gui.Name = "GhostPacketLaggerGui"
+Gui.ResetOnSpawn = false
+Gui.Parent = PlayerGui
 
-local stroke = Instance.new("UIStroke", mainFrame)
-stroke.Color = Color3.fromRGB(160, 50, 255)
-stroke.Thickness = 1.5
+local Main = Instance.new("Frame")
+Main.Size = UDim2.fromOffset(290, 265)
+Main.Position = UDim2.new(0.5, -145, 0.5, -132)
+Main.BackgroundColor3 = Color3.fromRGB(12, 10, 18)
+Main.BorderSizePixel = 0
+Main.Active = true
+Main.Draggable = true
+Main.Parent = Gui
 
--- Nagłówek w stylu terminala
-local topBar = Instance.new("Frame")
-topBar.Size = UDim2.new(1, 0, 0, 32)
-topBar.BackgroundColor3 = Color3.fromRGB(22, 18, 32)
-topBar.BorderSizePixel = 0
-topBar.Parent = mainFrame
-Instance.new("UICorner", topBar).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 9)
 
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, -16, 1, 0)
-titleLabel.Position = UDim2.new(0, 12, 0, 0)
-titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "// GHOST.SYS // LAGGER"
-titleLabel.TextColor3 = Color3.fromRGB(200, 150, 255)
-titleLabel.Font = Enum.Font.Code
-titleLabel.TextSize = 13
-titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-titleLabel.Parent = topBar
+local Stroke = Instance.new("UIStroke", Main)
+Stroke.Color = Color3.fromRGB(160, 50, 255)
+Stroke.Thickness = 1.5
 
--- Sekcja Power
-local powerLabel = Instance.new("TextLabel")
-powerLabel.Size = UDim2.new(1, -24, 0, 18)
-powerLabel.Position = UDim2.new(0, 12, 0, 48)
-powerLabel.BackgroundTransparency = 1
-powerLabel.Text = "BUFFER POWER"
-powerLabel.TextColor3 = Color3.fromRGB(130, 110, 160)
-powerLabel.Font = Enum.Font.Code
-powerLabel.TextSize = 11
-powerLabel.TextXAlignment = Enum.TextXAlignment.Left
-powerLabel.Parent = mainFrame
-
-local powerBox = Instance.new("TextBox")
-powerBox.Size = UDim2.fromOffset(190, 36)
-powerBox.Position = UDim2.new(0, 12, 0, 70)
-powerBox.BackgroundColor3 = Color3.fromRGB(18, 14, 28)
-powerBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-powerBox.Font = Enum.Font.Code
-powerBox.TextSize = 14
-powerBox.Text = tostring(LaggerState.Power)
-powerBox.Parent = mainFrame
-Instance.new("UICorner", powerBox).CornerRadius = UDim.new(0, 6)
-
-local minusBtn = Instance.new("TextButton")
-minusBtn.Size = UDim2.fromOffset(30, 36)
-minusBtn.Position = UDim2.new(0, 208, 0, 70)
-minusBtn.BackgroundColor3 = Color3.fromRGB(35, 25, 55)
-minusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-minusBtn.Font = Enum.Font.Code
-minusBtn.TextSize = 14
-minusBtn.Text = "-"
-minusBtn.Parent = mainFrame
-Instance.new("UICorner", minusBtn).CornerRadius = UDim.new(0, 6)
-
-local plusBtn = Instance.new("TextButton")
-plusBtn.Size = UDim2.fromOffset(30, 36)
-plusBtn.Position = UDim2.new(0, 242, 0, 70)
-plusBtn.BackgroundColor3 = Color3.fromRGB(35, 25, 55)
-plusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-plusBtn.Font = Enum.Font.Code
-plusBtn.TextSize = 14
-plusBtn.Text = "+"
-plusBtn.Parent = mainFrame
-Instance.new("UICorner", plusBtn).CornerRadius = UDim.new(0, 6)
-
-minusBtn.MouseButton1Click:Connect(function()
-    LaggerState.Power = math.max(1000, LaggerState.Power - 1000)
-    powerBox.Text = tostring(LaggerState.Power)
-end)
-
-plusBtn.MouseButton1Click:Connect(function()
-    LaggerState.Power = math.min(50000, LaggerState.Power + 1000)
-    powerBox.Text = tostring(LaggerState.Power)
-end)
-
-powerBox.FocusLost:Connect(function()
-    local val = tonumber(powerBox.Text)
-    if val then LaggerState.Power = val else powerBox.Text = tostring(LaggerState.Power) end
-end)
-
--- Sekcja Keybind
-local keyLabel = Instance.new("TextLabel")
-keyLabel.Size = UDim2.new(1, -24, 0, 18)
-keyLabel.Position = UDim2.new(0, 12, 0, 118)
-keyLabel.BackgroundTransparency = 1
-keyLabel.Text = "TRIGGER KEY"
-keyLabel.TextColor3 = Color3.fromRGB(130, 110, 160)
-keyLabel.Font = Enum.Font.Code
-keyLabel.TextSize = 11
-keyLabel.TextXAlignment = Enum.TextXAlignment.Left
-keyLabel.Parent = mainFrame
-
-local keybindBtn = Instance.new("TextButton")
-keybindBtn.Size = UDim2.fromOffset(256, 36)
-keybindBtn.Position = UDim2.new(0, 12, 0, 140)
-keybindBtn.BackgroundColor3 = Color3.fromRGB(18, 14, 28)
-keybindBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-keybindBtn.Font = Enum.Font.Code
-keybindBtn.TextSize = 14
-keybindBtn.Text = "[" .. LaggerState.Keybind.Name .. "]"
-keybindBtn.Parent = mainFrame
-Instance.new("UICorner", keybindBtn).CornerRadius = UDim.new(0, 6)
-
-local listening = false
-keybindBtn.MouseButton1Click:Connect(function()
-    listening = true
-    keybindBtn.Text = "[...]"
-end)
-
-UserInputService.InputBegan:Connect(function(input)
-    if listening and input.UserInputType == Enum.UserInputType.Keyboard then
-        listening = false
-        LaggerState.Keybind = input.KeyCode
-        keybindBtn.Text = "[" .. LaggerState.Keybind.Name .. "]"
-    end
-end)
-
--- Przycisk aktywacji (Neon Status)
-local toggleBtn = Instance.new("TextButton")
-toggleBtn.Size = UDim2.fromOffset(256, 44)
-toggleBtn.Position = UDim2.new(0, 12, 0, 196)
-toggleBtn.BackgroundColor3 = Color3.fromRGB(45, 20, 80)
-toggleBtn.TextColor3 = Color3.fromRGB(220, 180, 255)
-toggleBtn.Font = Enum.Font.Code
-toggleBtn.TextSize = 14
-toggleBtn.Text = "STATUS: IDLE"
-toggleBtn.Parent = mainFrame
-Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 6)
-
-local function setLaggerState(active)
-    LaggerState.Active = active
-    if active then
-        toggleBtn.Text = "STATUS: ACTIVE"
-        toggleBtn.BackgroundColor3 = Color3.fromRGB(120, 20, 200)
-        toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    else
-        toggleBtn.Text = "STATUS: IDLE"
-        toggleBtn.BackgroundColor3 = Color3.fromRGB(45, 20, 80)
-        toggleBtn.TextColor3 = Color3.fromRGB(220, 180, 255)
-        
-        if #buffer > 0 then
-            task.spawn(function()
-                local char = localPlayer.Character
-                if char and char:FindFirstChild("HumanoidRootPart") then
-                    char.HumanoidRootPart.CFrame = buffer[#buffer]
-                end
-                buffer = {}
-            end)
-        end
-    end
+local function Label(text, position, size)
+    local obj = Instance.new("TextLabel")
+    obj.Size = size
+    obj.Position = position
+    obj.BackgroundTransparency = 1
+    obj.Text = text
+    obj.TextColor3 = Color3.fromRGB(200, 170, 255)
+    obj.Font = Enum.Font.Code
+    obj.TextSize = 12
+    obj.TextXAlignment = Enum.TextXAlignment.Left
+    obj.Parent = Main
+    return obj
 end
 
-toggleBtn.MouseButton1Click:Connect(function()
-    setLaggerState(not LaggerState.Active)
+local function Button(text, position, size)
+    local obj = Instance.new("TextButton")
+    obj.Size = size
+    obj.Position = position
+    obj.BackgroundColor3 = Color3.fromRGB(35, 25, 55)
+    obj.TextColor3 = Color3.fromRGB(255, 255, 255)
+    obj.Font = Enum.Font.Code
+    obj.TextSize = 14
+    obj.Text = text
+    obj.Parent = Main
+    Instance.new("UICorner", obj).CornerRadius = UDim.new(0, 6)
+    return obj
+end
+
+local Header = Instance.new("Frame")
+Header.Size = UDim2.new(1, 0, 0, 35)
+Header.BackgroundColor3 = Color3.fromRGB(25, 18, 38)
+Header.BorderSizePixel = 0
+Header.Parent = Main
+
+Label("// GHOST.SYS // PACKET LAGGER",
+    UDim2.fromOffset(12, 0),
+    UDim2.new(1, -24, 0, 35))
+
+Label("BUFFER DELAY (MS)",
+    UDim2.fromOffset(14, 48),
+    UDim2.fromOffset(250, 18))
+
+local PowerBox = Instance.new("TextBox")
+PowerBox.Size = UDim2.fromOffset(180, 35)
+PowerBox.Position = UDim2.fromOffset(14, 72)
+PowerBox.BackgroundColor3 = Color3.fromRGB(22, 17, 32)
+PowerBox.TextColor3 = Color3.new(1, 1, 1)
+PowerBox.Font = Enum.Font.Code
+PowerBox.TextSize = 14
+PowerBox.Text = tostring(Config.Power)
+PowerBox.Parent = Main
+
+Instance.new("UICorner", PowerBox).CornerRadius = UDim.new(0, 6)
+
+local Minus = Button("-", UDim2.fromOffset(202, 72), UDim2.fromOffset(32, 35))
+local Plus = Button("+", UDim2.fromOffset(240, 72), UDim2.fromOffset(32, 35))
+
+local KeyLabel = Label("TRIGGER KEY",
+    UDim2.fromOffset(14, 116),
+    UDim2.fromOffset(250, 18))
+
+local KeyButton = Button("[F]",
+    UDim2.fromOffset(14, 138),
+    UDim2.fromOffset(258, 35))
+
+local Toggle = Button("STATUS: IDLE",
+    UDim2.fromOffset(14, 188),
+    UDim2.fromOffset(258, 42))
+
+local Info = Label("GHOST BUFFER: 0",
+    UDim2.fromOffset(14, 238),
+    UDim2.fromOffset(260, 18))
+
+-- LOCAL GHOST MARKER
+local Ghost = Instance.new("Part")
+Ghost.Name = "GhostLocalMarker"
+Ghost.Size = Vector3.new(2, 3, 1)
+Ghost.Anchored = true
+Ghost.CanCollide = false
+Ghost.CanTouch = false
+Ghost.CanQuery = false
+Ghost.Material = Enum.Material.Neon
+Ghost.Color = Color3.fromRGB(170, 50, 255)
+Ghost.Transparency = 0.55
+Ghost.Parent = workspace
+
+local function UpdatePower(value)
+    Config.Power = math.clamp(
+        math.floor(value),
+        Config.MinPower,
+        Config.MaxPower
+    )
+
+    PowerBox.Text = tostring(Config.Power)
+end
+
+Minus.MouseButton1Click:Connect(function()
+    UpdatePower(Config.Power - Config.Step)
 end)
 
-UserInputService.InputBegan:Connect(function(input, gp)
-    if gp then return end
-    if input.KeyCode == LaggerState.Keybind then
-        setLaggerState(not LaggerState.Active)
-    end
+Plus.MouseButton1Click:Connect(function()
+    UpdatePower(Config.Power + Config.Step)
 end)
 
-RunService.Heartbeat:Connect(function()
-    local char = localPlayer.Character
-    if not char then return end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
+PowerBox.FocusLost:Connect(function()
+    local value = tonumber(PowerBox.Text)
 
-    if LaggerState.Active then
-        table.insert(buffer, hrp.CFrame)
-        if #buffer > LaggerState.Power then
-            table.remove(buffer, 1)
-        end
+    if value then
+        UpdatePower(value)
     else
-        buffer = {}
+        PowerBox.Text = tostring(Config.Power)
     end
+end)
+
+-- KEYBIND
+KeyButton.MouseButton1Click:Connect(function()
+    State.Listening = true
+    KeyButton.Text = "[PRESS KEY]"
+end)
+
+UserInputService.InputBegan:Connect(function(input, processed)
+    if State.Listening and input.UserInputType == Enum.UserInputType.Keyboard then
+        Config.Keybind = input.KeyCode
+        State.Listening = false
+        KeyButton.Text = "[" .. input.KeyCode.Name .. "]"
+        return
+    end
+
+    if processed then return end
+
+    if input.KeyCode == Config.Keybind then
+        State.Active = not State.Active
+    end
+end)
+
+-- TOGGLE
+Toggle.MouseButton1Click:Connect(function()
+    State.Active = not State.Active
+end)
+
+local function GetDelayedPosition()
+    local targetTime = os.clock() - Config.Power / 1000
+
+    for i = #State.Buffer, 1, -1 do
+        local entry = State.Buffer[i]
+
+        if entry.Time <= targetTime then
+            return entry.CFrame
+        end
+    end
+
+    return nil
+end
+
+-- BUFFER ENGINE
+RunService.Heartbeat:Connect(function()
+    local character = Player.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+
+    if not root then
+        Ghost.Transparency = 1
+        return
+    end
+
+    if State.Active then
+        table.insert(State.Buffer, {
+            Time = os.clock(),
+            CFrame = root.CFrame
+        })
+
+        local cutoff = os.clock() - 6
+
+        while #State.Buffer > 0 and State.Buffer[1].Time < cutoff do
+            table.remove(State.Buffer, 1)
+        end
+
+        local delayed = GetDelayedPosition()
+
+        if delayed then
+            Ghost.CFrame = delayed
+            Ghost.Transparency = 0.55
+        else
+            Ghost.Transparency = 1
+        end
+
+        Info.Text = "GHOST BUFFER: " .. #State.Buffer
+    else
+        table.clear(State.Buffer)
+        Ghost.Transparency = 1
+        Info.Text = "GHOST BUFFER: 0"
+    end
+
+    if State.Active then
+        Toggle.Text = "STATUS: ACTIVE"
+        Toggle.BackgroundColor3 = Color3.fromRGB(110, 25, 180)
+    else
+        Toggle.Text = "STATUS: IDLE"
+        Toggle.BackgroundColor3 = Color3.fromRGB(35, 25, 55)
+    end
+end)
+
+-- CLEANUP
+Gui.Destroying:Connect(function()
+    Ghost:Destroy()
 end)

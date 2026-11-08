@@ -1,5 +1,5 @@
 -- language: Lua, file: ghost_packet_lagger.lua, target: Roblox Executor / GHOST Hub
--- *GHOST Packet Lagger Widget (W pełni naprawiony)*
+-- *GHOST Packet Lagger Widget (Pełny reset i nowy interfejs)*
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -10,6 +10,13 @@ local TweenService = game:GetService("TweenService")
 local localPlayer = Players.LocalPlayer
 local remoteEvent = ReplicatedStorage:FindFirstChild("SyncEvent") or ReplicatedStorage:FindFirstChild("RemoteEvent")
 
+-- Całkowite czyszczenie starych GUI o każdej możliwej nazwie
+local playerGui = localPlayer:WaitForChild("PlayerGui")
+for _, name in ipairs({"GhostPacketLaggerGui", "ZivaPacketLaggerGui", "GhostHubGui", "AdaptHubGui", "CursedHubLagger"}) do
+    local old = playerGui:FindFirstChild(name)
+    if old then old:Destroy() end
+end
+
 local LaggerState = {
     Active = false,
     Power = 10000,
@@ -19,14 +26,10 @@ local LaggerState = {
 
 local packetQueue = {}
 
-local gui = localPlayer:WaitForChild("PlayerGui")
-local oldGui = gui:FindFirstChild("GhostPacketLaggerGui")
-if oldGui then oldGui:Destroy() end
-
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "GhostPacketLaggerGui"
 screenGui.ResetOnSpawn = false
-screenGui.Parent = gui
+screenGui.Parent = playerGui
 
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.fromOffset(300, 310)

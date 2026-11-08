@@ -1,10 +1,10 @@
--- language: Lua, file: ghost_packet_lagger_fixed.lua, target: Roblox Executor / GHOST Hub
--- *GHOST Packet Lagger - Prawdziwe zamrażanie replikacji sieciowej (Network Freeze)*
+-- language: Lua, file: ghost_packet_lagger_hardcore.lua, target: Roblox Executor / GHOST Hub
+-- *GHOST Packet Lagger - Niskopoziomowe blokowanie i buforowanie pakietów sieciowych*
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local NetworkClient = cloneref and cloneref(game:GetService("NetworkClient")) or game:GetService("NetworkClient")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local localPlayer = Players.LocalPlayer
 local playerGui = localPlayer:WaitForChild("PlayerGui")
@@ -21,9 +21,9 @@ local LaggerState = {
     Keybind = Enum.KeyCode.G
 }
 
-local buffer = {}
+local packetQueue = {}
 
--- Tworzenie GUI (Idealny styl GHOST z Twojego zdjęcia)
+-- Tworzenie okna GUI (Identyczny wygląd GHOST)
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "GhostPacketLaggerGui"
 screenGui.ResetOnSpawn = false
@@ -162,7 +162,24 @@ toggleBtn.Text = "Wyłączone"
 toggleBtn.Parent = mainFrame
 Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 10)
 
--- Mechanika faktycznego zamrażania replikacji i nagłego flushu pozycji
+-- Metmometoda hookująca wszystkie zapytania FireServer w grze
+local oldNamecall
+oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+    local method = getnamecallmethod()
+    local args = {...}
+    
+    if LaggerState.Active and (method == "FireServer" or method == "InvokeServer") then
+        -- Przechwytujemy i buforujemy pakiety zamiast wysyłać do serwera
+        table.insert(packetQueue, {self, method, args})
+        if #packetQueue > LaggerState.Power then
+            table.remove(packetQueue, 1)
+        end
+        return
+    end
+    
+    return oldNamecall(self, ...)
+end)
+
 local function setLaggerState(active)
     LaggerState.Active = active
     if active then
@@ -172,18 +189,20 @@ local function setLaggerState(active)
         toggleBtn.Text = "Wyłączone"
         toggleBtn.BackgroundColor3 = Color3.fromRGB(130, 95, 210)
         
-        -- Flush: natychmiastowe wypuszczenie bufora ruchów do serwera
-        if #buffer > 0 then
+        -- Wypuszczenie całego bufora na raz (Flush)
+        if #packetQueue > 0 then
             task.spawn(function()
-                local char = localPlayer.Character
-                if char and char:FindFirstChild("HumanoidRootPart") then
-                    local hrp = char.HumanoidRootPart
-                    local lastPos = buffer[#buffer]
-                    if lastPos then
-                        hrp.CFrame = lastPos
-                    end
+                local queueCopy = packetQueue
+                packetQueue = {}
+                for _, pkt in ipairs(queueCopy) do
+                    pcall(function()
+                        if pkt[2] == "FireServer" then
+                            pkt[1]:FireServer(unpack(pkt[3]))
+                        elseif pkt[2] == "InvokeServer" then
+                            pkt[1]:InvokeServer(unpack(pkt[3]))
+                        end
+                    end)
                 end
-                buffer = {}
             end)
         end
     end
@@ -197,22 +216,5 @@ UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
     if input.KeyCode == LaggerState.Keybind then
         setLaggerState(not LaggerState.Active)
-    end
-end)
-
--- Pętla przechwytująca i buforująca pozycję
-RunService.Heartbeat:Connect(function()
-    local char = localPlayer.Character
-    if not char then return end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-
-    if LaggerState.Active then
-        table.insert(buffer, hrp.CFrame)
-        if #buffer > LaggerState.Power then
-            table.remove(buffer, 1)
-        end
-    else
-        buffer = {}
     end
 end)

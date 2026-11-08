@@ -1,15 +1,13 @@
--- language: Lua, file: ghost_packet_lagger_hardcore.lua, target: Roblox Executor / GHOST Hub
--- *GHOST Packet Lagger - Niskopoziomowe blokowanie i buforowanie pakietów sieciowych*
+-- language: Lua, file: ghost_packet_lagger_minimal.lua, target: Roblox Executor / GHOST Hub
+-- *GHOST Packet Lagger - Minimalist Dark Cyber / Neon Violet Variant*
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local localPlayer = Players.LocalPlayer
 local playerGui = localPlayer:WaitForChild("PlayerGui")
 
--- Czyszczenie starych okien
 for _, name in ipairs({"GhostPacketLaggerGui", "ZivaPacketLaggerGui"}) do
     local old = playerGui:FindFirstChild(name)
     if old then old:Destroy() end
@@ -18,84 +16,92 @@ end
 local LaggerState = {
     Active = false,
     Power = 10000,
-    Keybind = Enum.KeyCode.G
+    Keybind = Enum.KeyCode.F
 }
 
-local packetQueue = {}
+local buffer = {}
 
--- Tworzenie okna GUI (Identyczny wygląd GHOST)
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "GhostPacketLaggerGui"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
+-- Nowy, bardziej agresywny i minimalistyczny design (Dark Cyber / Tech)
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.fromOffset(300, 310)
-mainFrame.Position = UDim2.new(0.5, -150, 0.5, -155)
-mainFrame.BackgroundColor3 = Color3.fromRGB(85, 37, 150)
+mainFrame.Size = UDim2.fromOffset(280, 270)
+mainFrame.Position = UDim2.new(0.5, -140, 0.5, -135)
+mainFrame.BackgroundColor3 = Color3.fromRGB(12, 10, 18)
 mainFrame.BorderSizePixel = 0
 mainFrame.Active = true
 mainFrame.Draggable = true
 mainFrame.Parent = screenGui
 
-Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 16)
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 8)
 
 local stroke = Instance.new("UIStroke", mainFrame)
-stroke.Color = Color3.fromRGB(130, 60, 220)
-stroke.Thickness = 2
-stroke.Transparency = 0.2
+stroke.Color = Color3.fromRGB(160, 50, 255)
+stroke.Thickness = 1.5
+
+-- Nagłówek w stylu terminala
+local topBar = Instance.new("Frame")
+topBar.Size = UDim2.new(1, 0, 0, 32)
+topBar.BackgroundColor3 = Color3.fromRGB(22, 18, 32)
+topBar.BorderSizePixel = 0
+topBar.Parent = mainFrame
+Instance.new("UICorner", topBar).CornerRadius = UDim.new(0, 8)
 
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, -30, 0, 35)
-titleLabel.Position = UDim2.new(0, 16, 0, 14)
+titleLabel.Size = UDim2.new(1, -16, 1, 0)
+titleLabel.Position = UDim2.new(0, 12, 0, 0)
 titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "GHOST PACKET LAGGER"
-titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-titleLabel.Font = Enum.Font.GothamBold
-titleLabel.TextSize = 16
+titleLabel.Text = "// GHOST.SYS // LAGGER"
+titleLabel.TextColor3 = Color3.fromRGB(200, 150, 255)
+titleLabel.Font = Enum.Font.Code
+titleLabel.TextSize = 13
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-titleLabel.Parent = mainFrame
+titleLabel.Parent = topBar
 
-local powerTitle = Instance.new("TextLabel")
-powerTitle.Size = UDim2.new(1, -30, 0, 20)
-powerTitle.Position = UDim2.new(0, 16, 0, 52)
-powerTitle.BackgroundTransparency = 1
-powerTitle.Text = "power"
-powerTitle.TextColor3 = Color3.fromRGB(210, 190, 240)
-powerTitle.Font = Enum.Font.GothamMedium
-powerTitle.TextSize = 13
-powerTitle.TextXAlignment = Enum.TextXAlignment.Left
-powerTitle.Parent = mainFrame
+-- Sekcja Power
+local powerLabel = Instance.new("TextLabel")
+powerLabel.Size = UDim2.new(1, -24, 0, 18)
+powerLabel.Position = UDim2.new(0, 12, 0, 48)
+powerLabel.BackgroundTransparency = 1
+powerLabel.Text = "BUFFER POWER"
+powerLabel.TextColor3 = Color3.fromRGB(130, 110, 160)
+powerLabel.Font = Enum.Font.Code
+powerLabel.TextSize = 11
+powerLabel.TextXAlignment = Enum.TextXAlignment.Left
+powerLabel.Parent = mainFrame
 
 local powerBox = Instance.new("TextBox")
-powerBox.Size = UDim2.fromOffset(210, 42)
-powerBox.Position = UDim2.new(0, 16, 0, 76)
-powerBox.BackgroundColor3 = Color3.fromRGB(28, 20, 50)
+powerBox.Size = UDim2.fromOffset(190, 36)
+powerBox.Position = UDim2.new(0, 12, 0, 70)
+powerBox.BackgroundColor3 = Color3.fromRGB(18, 14, 28)
 powerBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-powerBox.Font = Enum.Font.GothamBold
-powerBox.TextSize = 16
+powerBox.Font = Enum.Font.Code
+powerBox.TextSize = 14
 powerBox.Text = tostring(LaggerState.Power)
 powerBox.Parent = mainFrame
-Instance.new("UICorner", powerBox).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", powerBox).CornerRadius = UDim.new(0, 6)
 
 local minusBtn = Instance.new("TextButton")
-minusBtn.Size = UDim2.fromOffset(32, 20)
-minusBtn.Position = UDim2.new(0, 236, 0, 76)
-minusBtn.BackgroundColor3 = Color3.fromRGB(65, 30, 115)
+minusBtn.Size = UDim2.fromOffset(30, 36)
+minusBtn.Position = UDim2.new(0, 208, 0, 70)
+minusBtn.BackgroundColor3 = Color3.fromRGB(35, 25, 55)
 minusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-minusBtn.Font = Enum.Font.GothamBold
-minusBtn.TextSize = 16
+minusBtn.Font = Enum.Font.Code
+minusBtn.TextSize = 14
 minusBtn.Text = "-"
 minusBtn.Parent = mainFrame
 Instance.new("UICorner", minusBtn).CornerRadius = UDim.new(0, 6)
 
 local plusBtn = Instance.new("TextButton")
-plusBtn.Size = UDim2.fromOffset(32, 20)
-plusBtn.Position = UDim2.new(0, 236, 0, 98)
-plusBtn.BackgroundColor3 = Color3.fromRGB(65, 30, 115)
+plusBtn.Size = UDim2.fromOffset(30, 36)
+plusBtn.Position = UDim2.new(0, 242, 0, 70)
+plusBtn.BackgroundColor3 = Color3.fromRGB(35, 25, 55)
 plusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-plusBtn.Font = Enum.Font.GothamBold
-plusBtn.TextSize = 16
+plusBtn.Font = Enum.Font.Code
+plusBtn.TextSize = 14
 plusBtn.Text = "+"
 plusBtn.Parent = mainFrame
 Instance.new("UICorner", plusBtn).CornerRadius = UDim.new(0, 6)
@@ -115,94 +121,73 @@ powerBox.FocusLost:Connect(function()
     if val then LaggerState.Power = val else powerBox.Text = tostring(LaggerState.Power) end
 end)
 
-local keybindTitle = Instance.new("TextLabel")
-keybindTitle.Size = UDim2.new(1, -30, 0, 20)
-keybindTitle.Position = UDim2.new(0, 16, 0, 132)
-keybindTitle.BackgroundTransparency = 1
-keybindTitle.Text = "keybind"
-keybindTitle.TextColor3 = Color3.fromRGB(210, 190, 240)
-keybindTitle.Font = Enum.Font.GothamMedium
-keybindTitle.TextSize = 13
-keybindTitle.TextXAlignment = Enum.TextXAlignment.Left
-keybindTitle.Parent = mainFrame
+-- Sekcja Keybind
+local keyLabel = Instance.new("TextLabel")
+keyLabel.Size = UDim2.new(1, -24, 0, 18)
+keyLabel.Position = UDim2.new(0, 12, 0, 118)
+keyLabel.BackgroundTransparency = 1
+keyLabel.Text = "TRIGGER KEY"
+keyLabel.TextColor3 = Color3.fromRGB(130, 110, 160)
+keyLabel.Font = Enum.Font.Code
+keyLabel.TextSize = 11
+keyLabel.TextXAlignment = Enum.TextXAlignment.Left
+keyLabel.Parent = mainFrame
 
 local keybindBtn = Instance.new("TextButton")
-keybindBtn.Size = UDim2.fromOffset(268, 42)
-keybindBtn.Position = UDim2.new(0, 16, 0, 156)
-keybindBtn.BackgroundColor3 = Color3.fromRGB(28, 20, 50)
+keybindBtn.Size = UDim2.fromOffset(256, 36)
+keybindBtn.Position = UDim2.new(0, 12, 0, 140)
+keybindBtn.BackgroundColor3 = Color3.fromRGB(18, 14, 28)
 keybindBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-keybindBtn.Font = Enum.Font.GothamBold
-keybindBtn.TextSize = 16
-keybindBtn.Text = LaggerState.Keybind.Name
+keybindBtn.Font = Enum.Font.Code
+keybindBtn.TextSize = 14
+keybindBtn.Text = "[" .. LaggerState.Keybind.Name .. "]"
 keybindBtn.Parent = mainFrame
-Instance.new("UICorner", keybindBtn).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", keybindBtn).CornerRadius = UDim.new(0, 6)
 
 local listening = false
 keybindBtn.MouseButton1Click:Connect(function()
     listening = true
-    keybindBtn.Text = "..."
+    keybindBtn.Text = "[...]"
 end)
 
 UserInputService.InputBegan:Connect(function(input)
     if listening and input.UserInputType == Enum.UserInputType.Keyboard then
         listening = false
         LaggerState.Keybind = input.KeyCode
-        keybindBtn.Text = LaggerState.Keybind.Name
+        keybindBtn.Text = "[" .. LaggerState.Keybind.Name .. "]"
     end
 end)
 
+-- Przycisk aktywacji (Neon Status)
 local toggleBtn = Instance.new("TextButton")
-toggleBtn.Size = UDim2.fromOffset(268, 52)
-toggleBtn.Position = UDim2.new(0, 16, 0, 222)
-toggleBtn.BackgroundColor3 = Color3.fromRGB(130, 95, 210)
-toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleBtn.Font = Enum.Font.GothamBold
-toggleBtn.TextSize = 18
-toggleBtn.Text = "Wyłączone"
+toggleBtn.Size = UDim2.fromOffset(256, 44)
+toggleBtn.Position = UDim2.new(0, 12, 0, 196)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(45, 20, 80)
+toggleBtn.TextColor3 = Color3.fromRGB(220, 180, 255)
+toggleBtn.Font = Enum.Font.Code
+toggleBtn.TextSize = 14
+toggleBtn.Text = "STATUS: IDLE"
 toggleBtn.Parent = mainFrame
-Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 10)
-
--- Metmometoda hookująca wszystkie zapytania FireServer w grze
-local oldNamecall
-oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-    local method = getnamecallmethod()
-    local args = {...}
-    
-    if LaggerState.Active and (method == "FireServer" or method == "InvokeServer") then
-        -- Przechwytujemy i buforujemy pakiety zamiast wysyłać do serwera
-        table.insert(packetQueue, {self, method, args})
-        if #packetQueue > LaggerState.Power then
-            table.remove(packetQueue, 1)
-        end
-        return
-    end
-    
-    return oldNamecall(self, ...)
-end)
+Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 6)
 
 local function setLaggerState(active)
     LaggerState.Active = active
     if active then
-        toggleBtn.Text = "Włączone"
-        toggleBtn.BackgroundColor3 = Color3.fromRGB(80, 220, 120)
+        toggleBtn.Text = "STATUS: ACTIVE"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(120, 20, 200)
+        toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     else
-        toggleBtn.Text = "Wyłączone"
-        toggleBtn.BackgroundColor3 = Color3.fromRGB(130, 95, 210)
+        toggleBtn.Text = "STATUS: IDLE"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(45, 20, 80)
+        toggleBtn.TextColor3 = Color3.fromRGB(220, 180, 255)
         
-        -- Wypuszczenie całego bufora na raz (Flush)
-        if #packetQueue > 0 then
+        if #buffer > 0 then
             task.spawn(function()
-                local queueCopy = packetQueue
-                packetQueue = {}
-                for _, pkt in ipairs(queueCopy) do
-                    pcall(function()
-                        if pkt[2] == "FireServer" then
-                            pkt[1]:FireServer(unpack(pkt[3]))
-                        elseif pkt[2] == "InvokeServer" then
-                            pkt[1]:InvokeServer(unpack(pkt[3]))
-                        end
-                    end)
+                local char = localPlayer.Character
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    char.HumanoidRootPart.CFrame = buffer[#buffer]
                 end
+                buffer = {}
             end)
         end
     end
@@ -216,5 +201,21 @@ UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
     if input.KeyCode == LaggerState.Keybind then
         setLaggerState(not LaggerState.Active)
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    local char = localPlayer.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    if LaggerState.Active then
+        table.insert(buffer, hrp.CFrame)
+        if #buffer > LaggerState.Power then
+            table.remove(buffer, 1)
+        end
+    else
+        buffer = {}
     end
 end)

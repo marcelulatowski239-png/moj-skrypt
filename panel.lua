@@ -1,5 +1,5 @@
--- language: Lua, file: panel.lua, target: Roblox Executor / GHOST Hub Ultimate v9
--- *Complete GHOST Hub with Safe Ground TP, Working Tabs, Lagger & Atmospheric Visuals*
+-- language: Lua, file: panel.lua, target: Roblox Executor / GHOST Hub Ultimate v10
+-- *GHOST Hub - Bulletproof High-Altitude Ground Raycast TP, Working Tabs & Lagger*
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -66,7 +66,6 @@ local config = {
     FovChange = false,
     FovValue = 120,
 
-    -- Wizualizacje nieba i otoczenia
     CustomSky = true,
     SkyColor = Color3.fromRGB(120, 40, 255),
     AtmosphereGlow = true,
@@ -107,7 +106,7 @@ stroke.Color = Color3.fromRGB(140, 50, 255)
 stroke.Thickness = 2
 stroke.Transparency = 0.15
 
--- Górny nagłówek GHOST
+-- Górny nagłówek GHOST (W 100% GHOST)
 local topBar = Instance.new("Frame")
 topBar.Size = UDim2.new(1, 0, 0, 60)
 topBar.BackgroundTransparency = 1
@@ -363,7 +362,7 @@ createToggle(pages["VISUAL"], "Custom Sky & Atmosfera", config.CustomSky, functi
     if v then
         Lighting.Ambient = Color3.fromRGB(50, 30, 80)
         Lighting.OutdoorAmbient = Color3.fromRGB(70, 40, 100)
-        Lighting.ClockTime = 0 -- Nocny, klimatyczny tryb fioletowego nieba
+        Lighting.ClockTime = 0
     else
         Lighting.Ambient = Color3.fromRGB(127, 127, 127)
         Lighting.OutdoorAmbient = Color3.fromRGB(127, 127, 127)
@@ -420,15 +419,14 @@ for i, name in ipairs(pageNames) do
     end)
 end
 
--- Naprawione bezpieczne TP Down (Zawsze ląduje BEZPIECZNIE NA ZIEMI, nigdy pod nią)
+-- Całkowicie naprawiony, bezpieczny TP Down (Zawsze strzela z góry na dół, ląduje NA ZIEMI)
 local function doTpDown()
     local char = localPlayer.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
         local hrp = char.HumanoidRootPart
-        
-        -- Raycast szukający gruntu dokładnie pod graczem
-        local rayOrigin = hrp.Position + Vector3.new(0, 5, 0)
-        local rayDirection = Vector3.new(0, -500, 0)
+        -- Strzelamy raycastem od góry (Y = 500 nad graczem) w dół, aby na 100% trafić podłogę mapy
+        local rayOrigin = Vector3.new(hrp.Position.X, 500, hrp.Position.Z)
+        local rayDirection = Vector3.new(0, -1000, 0)
         
         local raycastParams = RaycastParams.new()
         raycastParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -437,11 +435,11 @@ local function doTpDown()
         local raycastResult = Workspace:Raycast(rayOrigin, rayDirection, raycastParams)
         
         if raycastResult then
-            -- Ląduje dokładnie 4 jednostki NAD powierzchnią ziemi, więc nigdy nie zapadniesz się pod podłogę
+            -- Ląduje dokładnie na trafionej powierzchni z bezpiecznym zapasem 4 studs w górę
             hrp.CFrame = CFrame.new(raycastResult.Position + Vector3.new(0, 4, 0))
         else
-            -- Awaryjny bezpieczny spadek w dół o 15 studs jeśli raycast nie wykryje platformy
-            hrp.CFrame = hrp.CFrame - Vector3.new(0, 15, 0)
+            -- Awaryjny skok w górę/bezpieczna pozycja jeśli nic nie wykryje
+            hrp.CFrame = hrp.CFrame + Vector3.new(0, 10, 0)
         end
     end
 end

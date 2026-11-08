@@ -1,5 +1,5 @@
 -- language: Lua, file: ghost_packet_lagger.lua, target: Roblox Executor / GHOST Hub
--- *GHOST Packet Lagger Widget (Dokładny styl z Twojego zdjęcia)*
+-- *GHOST Packet Lagger Widget (W pełni naprawiony)*
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

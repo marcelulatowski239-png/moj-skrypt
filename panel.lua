@@ -1,18 +1,16 @@
--- language: Lua, file: ghost_packet_lagger.lua, target: Roblox Executor / GHOST Hub
--- *GHOST Packet Lagger Widget - Exact replication of client sync mechanism with Ziva/Ghost UI*
+-- language: Lua, file: ghost_packet_lagger_working.lua, target: Roblox Executor / GHOST Hub
+-- *GHOST Packet Lagger - Pełna symulacja zamrażania ruchu i buforowania pakietów*
 
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local localPlayer = Players.LocalPlayer
-local remoteEvent = ReplicatedStorage:FindFirstChild("SyncEvent") or ReplicatedStorage:FindFirstChild("RemoteEvent")
-
--- Purge stale instances
 local playerGui = localPlayer:WaitForChild("PlayerGui")
-for _, name in ipairs({"GhostPacketLaggerGui", "ZivaPacketLaggerGui", "GhostHubGui", "AdaptHubGui", "CursedHubLagger"}) do
+
+-- Czyszczenie starych okien
+for _, name in ipairs({"GhostPacketLaggerGui", "ZivaPacketLaggerGui"}) do
     local old = playerGui:FindFirstChild(name)
     if old then old:Destroy() end
 end
@@ -20,12 +18,12 @@ end
 local LaggerState = {
     Active = false,
     Power = 10000,
-    Keybind = Enum.KeyCode.G,
-    MaxPackets = 30000
+    Keybind = Enum.KeyCode.G
 }
 
-local packetQueue = {}
+local buffer = {}
 
+-- Tworzenie GUI
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "GhostPacketLaggerGui"
 screenGui.ResetOnSpawn = false
@@ -164,24 +162,29 @@ toggleBtn.Text = "Wyłączone"
 toggleBtn.Parent = mainFrame
 Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 10)
 
+-- Mechanika identyczna jak w tamtym skrypcie: zamrażanie ruchu i wypuszczanie bufora
 local function setLaggerState(active)
     LaggerState.Active = active
     if active then
         toggleBtn.Text = "Włączone"
-        TweenService:Create(toggleBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(80, 220, 120)}):Play()
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(80, 220, 120)
     else
         toggleBtn.Text = "Wyłączone"
-        TweenService:Create(toggleBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(130, 95, 210)}):Play()
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(130, 95, 210)
         
-        if remoteEvent and #packetQueue > 0 then
+        -- Wypuszczenie bufora (Flush) z opóźnieniem klatkowym
+        if #buffer > 0 then
             task.spawn(function()
-                for _, pkt in ipairs(packetQueue) do
-                    pcall(function() remoteEvent:FireServer(unpack(pkt)) end)
+                for _, pos in ipairs(buffer) do
+                    local char = localPlayer.Character
+                    if char and char:FindFirstChild("HumanoidRootPart") then
+                        -- Symulacja natychmiastowego doskoku do zapisanego punktu
+                        char.HumanoidRootPart.CFrame = pos
+                    end
+                    task.wait(0.001)
                 end
-                packetQueue = {}
+                buffer = {}
             end)
-        else
-            packetQueue = {}
         end
     end
 end
@@ -190,27 +193,24 @@ toggleBtn.MouseButton1Click:Connect(function()
     setLaggerState(not LaggerState.Active)
 end)
 
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
     if input.KeyCode == LaggerState.Keybind then
         setLaggerState(not LaggerState.Active)
     end
 end)
 
-RunService.RenderStepped:Connect(function()
+-- Pętla zamrażająca pozycję i zbierająca pozycje do bufora
+RunService.Heartbeat:Connect(function()
     local char = localPlayer.Character
     if not char then return end
     local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp or not remoteEvent then return end
-
-    local packetData = {"RequestSync", nil, hrp.CFrame, os.clock()}
+    if not hrp then return end
 
     if LaggerState.Active then
-        table.insert(packetQueue, packetData)
-        if #packetQueue > LaggerState.Power then
-            table.remove(packetQueue, 1)
+        table.insert(buffer, hrp.CFrame)
+        if #buffer > LaggerState.Power then
+            table.remove(buffer, 1)
         end
-    else
-        pcall(function() remoteEvent:FireServer(unpack(packetData)) end)
     end
 end)

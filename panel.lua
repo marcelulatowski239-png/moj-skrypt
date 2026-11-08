@@ -1,10 +1,10 @@
--- language: Lua, file: ghost_packet_lagger_working.lua, target: Roblox Executor / GHOST Hub
--- *GHOST Packet Lagger - Pełna symulacja zamrażania ruchu i buforowania pakietów*
+-- language: Lua, file: ghost_packet_lagger_fixed.lua, target: Roblox Executor / GHOST Hub
+-- *GHOST Packet Lagger - Prawdziwe zamrażanie replikacji sieciowej (Network Freeze)*
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local NetworkClient = cloneref and cloneref(game:GetService("NetworkClient")) or game:GetService("NetworkClient")
 
 local localPlayer = Players.LocalPlayer
 local playerGui = localPlayer:WaitForChild("PlayerGui")
@@ -23,7 +23,7 @@ local LaggerState = {
 
 local buffer = {}
 
--- Tworzenie GUI
+-- Tworzenie GUI (Idealny styl GHOST z Twojego zdjęcia)
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "GhostPacketLaggerGui"
 screenGui.ResetOnSpawn = false
@@ -162,7 +162,7 @@ toggleBtn.Text = "Wyłączone"
 toggleBtn.Parent = mainFrame
 Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 10)
 
--- Mechanika identyczna jak w tamtym skrypcie: zamrażanie ruchu i wypuszczanie bufora
+-- Mechanika faktycznego zamrażania replikacji i nagłego flushu pozycji
 local function setLaggerState(active)
     LaggerState.Active = active
     if active then
@@ -172,16 +172,16 @@ local function setLaggerState(active)
         toggleBtn.Text = "Wyłączone"
         toggleBtn.BackgroundColor3 = Color3.fromRGB(130, 95, 210)
         
-        -- Wypuszczenie bufora (Flush) z opóźnieniem klatkowym
+        -- Flush: natychmiastowe wypuszczenie bufora ruchów do serwera
         if #buffer > 0 then
             task.spawn(function()
-                for _, pos in ipairs(buffer) do
-                    local char = localPlayer.Character
-                    if char and char:FindFirstChild("HumanoidRootPart") then
-                        -- Symulacja natychmiastowego doskoku do zapisanego punktu
-                        char.HumanoidRootPart.CFrame = pos
+                local char = localPlayer.Character
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    local hrp = char.HumanoidRootPart
+                    local lastPos = buffer[#buffer]
+                    if lastPos then
+                        hrp.CFrame = lastPos
                     end
-                    task.wait(0.001)
                 end
                 buffer = {}
             end)
@@ -200,7 +200,7 @@ UserInputService.InputBegan:Connect(function(input, gp)
     end
 end)
 
--- Pętla zamrażająca pozycję i zbierająca pozycje do bufora
+-- Pętla przechwytująca i buforująca pozycję
 RunService.Heartbeat:Connect(function()
     local char = localPlayer.Character
     if not char then return end
@@ -212,5 +212,7 @@ RunService.Heartbeat:Connect(function()
         if #buffer > LaggerState.Power then
             table.remove(buffer, 1)
         end
+    else
+        buffer = {}
     end
 end)

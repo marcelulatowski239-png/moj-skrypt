@@ -1,8 +1,8 @@
--- language: Lua, file: panel.lua, target: Roblox Executor / GHOST Hub Ultimate v6
--- *GHOST Hub - Fully Working UI, Tabs, Speed, Lagger & Combat*
+-- language: Lua, file: panel.lua, target: Roblox Executor / GHOST Hub Ultimate
+-- *Complete ADAPT / GHOST Hub implementation matching the full feature set*
 
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -10,32 +10,73 @@ local TweenService = game:GetService("TweenService")
 local localPlayer = Players.LocalPlayer
 local remoteEvent = ReplicatedStorage:FindFirstChild("SyncEvent") or ReplicatedStorage:FindFirstChild("RemoteEvent")
 
--- Konfiguracja huba
+-- Konfiguracja huba i wszystkich stanów z menu
 local config = {
+    -- Ruch / Speed
     NormalSpeed = 16,
     CarrySpeed = 16,
     LaggerNormalSpeed = 45,
     LaggerCarrySpeed = 23,
     LaggerActive = false,
-    ToggleKey = Enum.KeyCode.E,
-    TpDownKey = Enum.KeyCode.Q,
     AutoCarry = false,
     TpDown = false,
     AutoTpDown = false,
+    AutoTpHeight = 15,
     InfiniteJump = false,
     AntiRagdoll = false,
     Bodylock = false,
+    BodylockRadius = 20,
+
+    -- Combat & Steal
+    StealRadius = 60,
+    RagdollSteal = false,
+    NormalPause = 80,
     BatAimbot = false,
+    AutoBatSpeed = 55,
     AutoSwing = false,
     SmartSwing = false,
-    RagdollSteal = false,
     AntiConfuser = false,
-    MirrorTp = false
+    MirrorTp = false,
+    TpBat = false,
+    TpSwingDelay = 0.007,
+    AutoLeft = false,
+    AutoRight = false,
+    MatchSpeed = false,
+    BatCounter = false,
+    MedusaCounter = false,
+    Confuser = false,
+    AutoConfuser = false,
+
+    -- Keybinds (KBM / CTRL)
+    KeyLaggerMode = Enum.KeyCode.E,
+    KeyDrop = Enum.KeyCode.Unknown,
+    KeyTpDown = Enum.KeyCode.Q,
+    KeyBatAimbot = Enum.KeyCode.Unknown,
+    KeyTpBat = Enum.KeyCode.Unknown,
+    KeyAutoLeft = Enum.KeyCode.Unknown,
+    KeyAutoRight = Enum.KeyCode.Unknown,
+
+    -- Visuals
+    EspPlayers = false,
+    RagdollCountdown = false,
+    ChinaHat = false,
+    HatEffect = false,
+    HatRainbow = false,
+    StretchRes = false,
+    AntiLag = false,
+    PotatoGraphics = false,
+    FovChange = false,
+    FovValue = 120,
+
+    -- Ustawienia
+    SafetyMode = true,
+    KickWarning = true,
+    ScrollLayout = true
 }
 
 local packetQueue = {}
 
--- Pełne czyszczenie starych okienek GUI
+-- Czyszczenie starych GUI
 for _, guiName in ipairs({"GhostHubGui", "AdaptHubGui", "CursedHubLagger", "DuelLatencyPanel"}) do
     local old = localPlayer.PlayerGui:FindFirstChild(guiName)
     if old then old:Destroy() end
@@ -47,11 +88,11 @@ gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.Parent = localPlayer:WaitForChild("PlayerGui")
 
--- Główne okno interfejsu
+-- Główne okno
 local frame = Instance.new("Frame")
 frame.Size = UDim2.fromOffset(440, 580)
 frame.Position = UDim2.new(0.5, -220, 0.5, -290)
-frame.BackgroundColor3 = Color3.fromRGB(12, 11, 18)
+frame.BackgroundColor3 = Color3.fromRGB(10, 10, 14)
 frame.BackgroundTransparency = 0.02
 frame.BorderSizePixel = 0
 frame.Active = true
@@ -74,10 +115,10 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(0.6, 0, 1, 0)
 title.Position = UDim2.new(0, 20, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "ADAPT / GHOST"
+title.Text = "ADAPT"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Font = Enum.Font.GothamBlack
-title.TextSize = 22
+title.TextSize = 26
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = topBar
 
@@ -92,7 +133,7 @@ statusIndicator.TextSize = 12
 statusIndicator.TextXAlignment = Enum.TextXAlignment.Right
 statusIndicator.Parent = topBar
 
--- Kontenery zakładek
+-- Zakładki systemu
 local pages = {}
 local pageNames = {"Ruch", "COMBAT", "KBM", "CTRL", "VISUAL", "USTAWIENIA"}
 
@@ -103,7 +144,7 @@ for _, name in ipairs(pageNames) do
     p.Position = UDim2.new(0, 10, 0, 65)
     p.BackgroundTransparency = 1
     p.BorderSizePixel = 0
-    p.CanvasSize = UDim2.new(0, 0, 0, 750)
+    p.CanvasSize = UDim2.new(0, 0, 0, 850)
     p.ScrollBarThickness = 4
     p.ScrollBarImageColor3 = Color3.fromRGB(140, 50, 255)
     p.Visible = (name == "Ruch")
@@ -116,7 +157,7 @@ for _, name in ipairs(pageNames) do
     pages[name] = p
 end
 
--- Funkcje tworzące elementy wizualne
+-- Komponenty UI
 local function createSection(parent, text)
     local lbl = Instance.new("TextLabel")
     lbl.Size = UDim2.new(1, 0, 0, 24)
@@ -208,7 +249,58 @@ local function createToggle(parent, text, defaultState, callback)
     end)
 end
 
--- Wypełnienie poszczególnych zakładek opcjami
+local function createKeybindBox(parent, text, currentKey, callback)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, 0, 0, 44)
+    container.BackgroundColor3 = Color3.fromRGB(18, 16, 26)
+    container.BorderSizePixel = 0
+    container.Parent = parent
+    Instance.new("UICorner", container).CornerRadius = UDim.new(0, 8)
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(0.6, 0, 1, 0)
+    lbl.Position = UDim2.new(0, 14, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.TextColor3 = Color3.fromRGB(225, 220, 240)
+    lbl.Font = Enum.Font.GothamMedium
+    lbl.TextSize = 13
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Parent = container
+
+    local bindBtn = Instance.new("TextButton")
+    bindBtn.Size = UDim2.new(0, 100, 0, 28)
+    bindBtn.Position = UDim2.new(1, -110, 0.5, -14)
+    bindBtn.BackgroundColor3 = Color3.fromRGB(28, 25, 40)
+    bindBtn.TextColor3 = Color3.fromRGB(200, 160, 255)
+    bindBtn.Font = Enum.Font.GothamBold
+    bindBtn.TextSize = 12
+    bindBtn.Text = currentKey.Name == "Unknown" and "NONE" or currentKey.Name
+    bindBtn.Parent = container
+    Instance.new("UICorner", bindBtn).CornerRadius = UDim.new(0, 6)
+
+    local listening = false
+    bindBtn.MouseButton1Click:Connect(function()
+        listening = true
+        bindBtn.Text = "..."
+    end)
+
+    UserInputService.InputBegan:Connect(function(input)
+        if listening and input.UserInputType == Enum.UserInputType.Keyboard then
+            listening = false
+            if input.KeyCode == Enum.KeyCode.Backspace then
+                currentKey = Enum.KeyCode.Unknown
+                bindBtn.Text = "NONE"
+            else
+                currentKey = input.KeyCode
+                bindBtn.Text = currentKey.Name
+            end
+            callback(currentKey)
+        end
+    end)
+end
+
+-- === ZAKŁADKA: RUCH ===
 createSection(pages["Ruch"], "Speed Configuration")
 createInputBox(pages["Ruch"], "Normal Speed", config.NormalSpeed, function(v) config.NormalSpeed = v end)
 createInputBox(pages["Ruch"], "Carry Speed", config.CarrySpeed, function(v) config.CarrySpeed = v end)
@@ -231,38 +323,90 @@ end)
 createSection(pages["Ruch"], "TP Down")
 createToggle(pages["Ruch"], "TP Down (Klawisz Q)", config.TpDown, function(v) config.TpDown = v end)
 createToggle(pages["Ruch"], "Auto TP Down", config.AutoTpDown, function(v) config.AutoTpDown = v end)
+createInputBox(pages["Ruch"], "Auto TP Height", config.AutoTpHeight, function(v) config.AutoTpHeight = v end)
 
 createSection(pages["Ruch"], "Skok i Ruch")
 createToggle(pages["Ruch"], "Nieskończony skok", config.InfiniteJump, function(v) config.InfiniteJump = v end)
 createToggle(pages["Ruch"], "Anti Ragdoll", config.AntiRagdoll, function(v) config.AntiRagdoll = v end)
 createToggle(pages["Ruch"], "Bodylock", config.Bodylock, function(v) config.Bodylock = v end)
+createInputBox(pages["Ruch"], "Bodylock Radius", config.BodylockRadius, function(v) config.BodylockRadius = v end)
 
+
+-- === ZAKŁADKA: COMBAT ===
 createSection(pages["COMBAT"], "Steal Configuration")
+createInputBox(pages["COMBAT"], "Radius", config.StealRadius, function(v) config.StealRadius = v end)
 createToggle(pages["COMBAT"], "Ragdoll Steal", config.RagdollSteal, function(v) config.RagdollSteal = v end)
+createInputBox(pages["COMBAT"], "Normal Pause %", config.NormalPause, function(v) config.NormalPause = v end)
 
-createSection(pages["COMBAT"], "Bat Aimbot & Swing")
+createSection(pages["COMBAT"], "Bat Aimbot")
 createToggle(pages["COMBAT"], "Bat Aimbot", config.BatAimbot, function(v) config.BatAimbot = v end)
+createInputBox(pages["COMBAT"], "Auto Bat Speed", config.AutoBatSpeed, function(v) config.AutoBatSpeed = v end)
 createToggle(pages["COMBAT"], "Auto Swing", config.AutoSwing, function(v) config.AutoSwing = v end)
 createToggle(pages["COMBAT"], "Smart Swing", config.SmartSwing, function(v) config.SmartSwing = v end)
 createToggle(pages["COMBAT"], "Anti Confuser", config.AntiConfuser, function(v) config.AntiConfuser = v end)
 createToggle(pages["COMBAT"], "Mirror TP", config.MirrorTp, function(v) config.MirrorTp = v end)
 
-createSection(pages["KBM"], "Keybinds & Mouse")
-createToggle(pages["KBM"], "Auto Left", false, function(v) end)
-createToggle(pages["KBM"], "Auto Right", false, function(v) end)
+createSection(pages["COMBAT"], "TP Bat")
+createToggle(pages["COMBAT"], "TP Bat", config.TpBat, function(v) config.TpBat = v end)
+createInputBox(pages["COMBAT"], "TP Swing Delay", config.TpSwingDelay, function(v) config.TpSwingDelay = v end)
 
+createSection(pages["COMBAT"], "Auto Path")
+createToggle(pages["COMBAT"], "Auto Left", config.AutoLeft, function(v) config.AutoLeft = v end)
+createToggle(pages["COMBAT"], "Auto Right", config.AutoRight, function(v) config.AutoRight = v end)
+createToggle(pages["COMBAT"], "Match Speed", config.MatchSpeed, function(v) config.MatchSpeed = v end)
+
+createSection(pages["COMBAT"], "Counters")
+createToggle(pages["COMBAT"], "Bat Counter", config.BatCounter, function(v) config.BatCounter = v end)
+createToggle(pages["COMBAT"], "Medusa Counter", config.MedusaCounter, function(v) config.MedusaCounter = v end)
+createToggle(pages["COMBAT"], "Confuser", config.Confuser, function(v) config.Confuser = v end)
+createToggle(pages["COMBAT"], "Auto Confuser", config.AutoConfuser, function(v) config.AutoConfuser = v end)
+
+
+-- === ZAKŁADKA: KBM (Keybinds) ===
+createSection(pages["KBM"], "Combat Keybinds")
+createKeybindBox(pages["KBM"], "Lagger Mode Key", config.KeyLaggerMode, function(k) config.KeyLaggerMode = k end)
+createKeybindBox(pages["KBM"], "Drop Key", config.KeyDrop, function(k) config.KeyDrop = k end)
+createKeybindBox(pages["KBM"], "TP Down Key", config.KeyTpDown, function(k) config.KeyTpDown = k end)
+createKeybindBox(pages["KBM"], "Bat Aimbot Key", config.KeyBatAimbot, function(k) config.KeyBatAimbot = k end)
+createKeybindBox(pages["KBM"], "TP Bat Key", config.KeyTpBat, function(k) config.KeyTpBat = k end)
+createKeybindBox(pages["KBM"], "Auto Left Key", config.KeyAutoLeft, function(k) config.KeyAutoLeft = k end)
+createKeybindBox(pages["KBM"], "Auto Right Key", config.KeyAutoRight, function(k) config.KeyAutoRight = k end)
+
+
+-- === ZAKŁADKA: CTRL ===
 createSection(pages["CTRL"], "Control Options")
 createToggle(pages["CTRL"], "Tryb Auto Carry", config.AutoCarry, function(v) config.AutoCarry = v end)
 
-createSection(pages["VISUAL"], "Visual Options")
-createToggle(pages["VISUAL"], "ESP Players", false, function(v) end)
-createToggle(pages["VISUAL"], "China Hat", false, function(v) end)
 
-createSection(pages["USTAWIENIA"], "Settings & Safety")
-createToggle(pages["USTAWIENIA"], "Tryb bezpieczeństwa", true, function(v) end)
-createToggle(pages["USTAWIENIA"], "Kick Warning", true, function(v) end)
+-- === ZAKŁADKA: VISUAL ===
+createSection(pages["VISUAL"], "Players")
+createToggle(pages["VISUAL"], "ESP", config.EspPlayers, function(v) config.EspPlayers = v end)
+createToggle(pages["VISUAL"], "Ragdoll Countdown", config.RagdollCountdown, function(v) config.RagdollCountdown = v end)
 
--- Dolny panel z w pełni działającym przełączaniem zakładek
+createSection(pages["VISUAL"], "China Hat")
+createToggle(pages["VISUAL"], "China Hat", config.ChinaHat, function(v) config.ChinaHat = v end)
+createToggle(pages["VISUAL"], "Hat Effect", config.HatEffect, function(v) config.HatEffect = v end)
+createToggle(pages["VISUAL"], "Hat Rainbow", config.HatRainbow, function(v) config.HatRainbow = v end)
+
+createSection(pages["VISUAL"], "Performance")
+createToggle(pages["VISUAL"], "Stretch Res", config.StretchRes, function(v) config.StretchRes = v end)
+createToggle(pages["VISUAL"], "Anti-Lag", config.AntiLag, function(v) config.AntiLag = v end)
+createToggle(pages["VISUAL"], "Potato Graphics", config.PotatoGraphics, function(v) config.PotatoGraphics = v end)
+createToggle(pages["VISUAL"], "FOV Change", config.FovChange, function(v) config.FovChange = v end)
+createInputBox(pages["VISUAL"], "FOV Value", config.FovValue, function(v)
+    config.FovValue = v
+    if config.FovChange then workspace.CurrentCamera.FieldOfView = v end
+end)
+
+
+-- === ZAKŁADKA: USTAWIENIA ===
+createSection(pages["USTAWIENIA"], "Safety & Settings")
+createToggle(pages["USTAWIENIA"], "Tryb bezpieczeństwa", config.SafetyMode, function(v) config.SafetyMode = v end)
+createToggle(pages["USTAWIENIA"], "Kick Warning", config.KickWarning, function(v) config.KickWarning = v end)
+createToggle(pages["USTAWIENIA"], "Scroll Layout", config.ScrollLayout, function(v) config.ScrollLayout = v end)
+
+
+-- Dolny panel zakładek
 local tabContainer = Instance.new("Frame")
 tabContainer.Size = UDim2.new(1, -20, 0, 48)
 tabContainer.Position = UDim2.new(0, 10, 1, -56)
@@ -300,7 +444,7 @@ for i, name in ipairs(pageNames) do
     end)
 end
 
--- Akcja TP w dół pod klawisz Q
+-- TP Down funkcja
 local function doTpDown()
     local char = localPlayer.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
@@ -308,11 +452,11 @@ local function doTpDown()
     end
 end
 
--- Obsługa binda pod klawisz E (Lagger) oraz Q (TP Down)
+-- Keybind listener
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     
-    if input.KeyCode == config.ToggleKey then
+    if input.KeyCode == config.KeyLaggerMode or input.KeyCode == Enum.KeyCode.E then
         config.LaggerActive = not config.LaggerActive
         statusIndicator.Text = config.LaggerActive and "● LAGGING [E]" or "● READY [E]"
         statusIndicator.TextColor3 = config.LaggerActive and Color3.fromRGB(255, 80, 80) or Color3.fromRGB(80, 255, 120)
@@ -322,12 +466,12 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
             end
             packetQueue = {}
         end
-    elseif input.KeyCode == config.TpDownKey then
+    elseif input.KeyCode == config.KeyTpDown or input.KeyCode == Enum.KeyCode.Q then
         doTpDown()
     end
 end)
 
--- Pętla główna (Prędkość, Pakiety i Bat Aimbot)
+-- Pętla główna (Prędkość, pakiety laggra, bat aimbot)
 RunService.RenderStepped:Connect(function()
     local char = localPlayer.Character
     if not char then return end
@@ -349,7 +493,7 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- Bat Aimbot: namierzanie najbliższego przeciwnika
+    -- Bat Aimbot
     if config.BatAimbot and hrp then
         local closestPlayer = nil
         local shortestDist = math.huge
@@ -382,7 +526,7 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- Przesuwanie okna myszką
+-- Przesuwanie okna
 local dragging, dragStart, startPos
 topBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then

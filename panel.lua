@@ -1,5 +1,5 @@
--- language: Lua, file: panel.lua, target: Roblox Executor / GHOST Hub Ultimate v10
--- *GHOST Hub - Bulletproof High-Altitude Ground Raycast TP, Working Tabs & Lagger*
+-- language: Lua, file: panel.lua, target: Roblox Executor / GHOST Hub Ultimate v13
+-- *GHOST Hub - Complete Production Build with Under-Foot Raycast TP, Working Tabs & Atmospheric Engine*
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -106,7 +106,7 @@ stroke.Color = Color3.fromRGB(140, 50, 255)
 stroke.Thickness = 2
 stroke.Transparency = 0.15
 
--- Górny nagłówek GHOST (W 100% GHOST)
+-- Górny nagłówek GHOST
 local topBar = Instance.new("Frame")
 topBar.Size = UDim2.new(1, 0, 0, 60)
 topBar.BackgroundTransparency = 1
@@ -321,7 +321,7 @@ createToggle(pages["Ruch"], "Lagger Manual (Bind pod E)", config.LaggerActive, f
     end
 end)
 
-createSection(pages["Ruch"], "TP Down (Precyzyjnie na ziemię)")
+createSection(pages["Ruch"], "TP Down (Na ziemię pod stopami)")
 createToggle(pages["Ruch"], "TP Down (Klawisz Q)", config.TpDown, function(v) config.TpDown = v end)
 createToggle(pages["Ruch"], "Auto TP Down", config.AutoTpDown, function(v) config.AutoTpDown = v end)
 
@@ -355,7 +355,7 @@ createSection(pages["CTRL"], "Control Options")
 createToggle(pages["CTRL"], "Tryb Auto Carry", config.AutoCarry, function(v) config.AutoCarry = v end)
 
 
--- === ZAKŁADKA: VISUAL (Wizualizacje Nieba i Atmosfery) ===
+-- === ZAKŁADKA: VISUAL ===
 createSection(pages["VISUAL"], "Wizualizacje Nieba i Otoczenia")
 createToggle(pages["VISUAL"], "Custom Sky & Atmosfera", config.CustomSky, function(v)
     config.CustomSky = v
@@ -419,27 +419,26 @@ for i, name in ipairs(pageNames) do
     end)
 end
 
--- Całkowicie naprawiony, bezpieczny TP Down (Zawsze strzela z góry na dół, ląduje NA ZIEMI)
+-- Precyzyjny TP Down pod stopami (Zero dachów serwera, idealnie na posadzkę w SAB)
 local function doTpDown()
     local char = localPlayer.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
         local hrp = char.HumanoidRootPart
-        -- Strzelamy raycastem od góry (Y = 500 nad graczem) w dół, aby na 100% trafić podłogę mapy
-        local rayOrigin = Vector3.new(hrp.Position.X, 500, hrp.Position.Z)
-        local rayDirection = Vector3.new(0, -1000, 0)
+        
+        local rayOrigin = hrp.Position
+        local rayDirection = Vector3.new(0, -150, 0)
         
         local raycastParams = RaycastParams.new()
         raycastParams.FilterType = Enum.RaycastFilterType.Exclude
         raycastParams.FilterDescendantsInstances = {char}
+        raycastParams.IgnoreWater = true
         
-        local raycastResult = Workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+        local result = Workspace:Raycast(rayOrigin, rayDirection, raycastParams)
         
-        if raycastResult then
-            -- Ląduje dokładnie na trafionej powierzchni z bezpiecznym zapasem 4 studs w górę
-            hrp.CFrame = CFrame.new(raycastResult.Position + Vector3.new(0, 4, 0))
+        if result then
+            hrp.CFrame = CFrame.new(result.Position + Vector3.new(0, 3, 0))
         else
-            -- Awaryjny skok w górę/bezpieczna pozycja jeśli nic nie wykryje
-            hrp.CFrame = hrp.CFrame + Vector3.new(0, 10, 0)
+            hrp.CFrame = hrp.CFrame - Vector3.new(0, 15, 0)
         end
     end
 end
@@ -503,7 +502,7 @@ RunService.RenderStepped:Connect(function()
 
         if closestPlayer and shortestDist < 50 then
             local targetHrp = closestPlayer.Character.HumanoidRootPart
-            hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(targetHrp.Position.X, hrp.Position.Y, targetHrp.Position.Z))
+            hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(targetHrp.Position.X, targetHrp.Position.Y, targetHrp.Position.Z))
         end
     end
 end)

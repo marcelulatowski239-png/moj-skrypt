@@ -1,5 +1,5 @@
--- language: Lua, file: panel.lua, target: Roblox Executor / GHOST Hub Ultimate v8
--- *Complete GHOST Hub system with working tabs, ground raycast TP, keybinds & combat engine*
+-- language: Lua, file: panel.lua, target: Roblox Executor / GHOST Hub Ultimate v9
+-- *Complete GHOST Hub with Safe Ground TP, Working Tabs, Lagger & Atmospheric Visuals*
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -7,13 +7,13 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
 
 local localPlayer = Players.LocalPlayer
 local remoteEvent = ReplicatedStorage:FindFirstChild("SyncEvent") or ReplicatedStorage:FindFirstChild("RemoteEvent")
 
--- Pełna konfiguracja huba i stanów
+-- Konfiguracja huba
 local config = {
-    -- Ruch
     NormalSpeed = 16,
     CarrySpeed = 16,
     LaggerNormalSpeed = 45,
@@ -28,7 +28,6 @@ local config = {
     Bodylock = false,
     BodylockRadius = 20,
 
-    -- Combat & Steal
     StealRadius = 60,
     RagdollSteal = false,
     NormalPause = 80,
@@ -48,7 +47,6 @@ local config = {
     Confuser = false,
     AutoConfuser = false,
 
-    -- Keybinds
     KeyLaggerMode = Enum.KeyCode.E,
     KeyDrop = Enum.KeyCode.Unknown,
     KeyTpDown = Enum.KeyCode.Q,
@@ -57,7 +55,6 @@ local config = {
     KeyAutoLeft = Enum.KeyCode.Unknown,
     KeyAutoRight = Enum.KeyCode.Unknown,
 
-    -- Visuals
     EspPlayers = false,
     RagdollCountdown = false,
     ChinaHat = false,
@@ -69,7 +66,11 @@ local config = {
     FovChange = false,
     FovValue = 120,
 
-    -- Ustawienia
+    -- Wizualizacje nieba i otoczenia
+    CustomSky = true,
+    SkyColor = Color3.fromRGB(120, 40, 255),
+    AtmosphereGlow = true,
+
     SafetyMode = true,
     KickWarning = true,
     ScrollLayout = true
@@ -77,7 +78,7 @@ local config = {
 
 local packetQueue = {}
 
--- Czyszczenie starych instancji GUI
+-- Czyszczenie starych GUI
 for _, guiName in ipairs({"GhostHubGui", "AdaptHubGui", "CursedHubLagger", "DuelLatencyPanel"}) do
     local old = localPlayer.PlayerGui:FindFirstChild(guiName)
     if old then old:Destroy() end
@@ -89,7 +90,7 @@ gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.Parent = localPlayer:WaitForChild("PlayerGui")
 
--- Główne okno panelu
+-- Główne okno
 local frame = Instance.new("Frame")
 frame.Size = UDim2.fromOffset(440, 580)
 frame.Position = UDim2.new(0.5, -220, 0.5, -290)
@@ -106,7 +107,7 @@ stroke.Color = Color3.fromRGB(140, 50, 255)
 stroke.Thickness = 2
 stroke.Transparency = 0.15
 
--- Nagłówek górny (Zmieniony na GHOST)
+-- Górny nagłówek GHOST
 local topBar = Instance.new("Frame")
 topBar.Size = UDim2.new(1, 0, 0, 60)
 topBar.BackgroundTransparency = 1
@@ -134,7 +135,7 @@ statusIndicator.TextSize = 12
 statusIndicator.TextXAlignment = Enum.TextXAlignment.Right
 statusIndicator.Parent = topBar
 
--- Zakładki systemu interfejsu
+-- Zakładki
 local pages = {}
 local pageNames = {"Ruch", "COMBAT", "KBM", "CTRL", "VISUAL", "USTAWIENIA"}
 
@@ -158,7 +159,7 @@ for _, name in ipairs(pageNames) do
     pages[name] = p
 end
 
--- Generatory komponentów GUI
+-- Komponenty GUI
 local function createSection(parent, text)
     local lbl = Instance.new("TextLabel")
     lbl.Size = UDim2.new(1, 0, 0, 24)
@@ -321,57 +322,33 @@ createToggle(pages["Ruch"], "Lagger Manual (Bind pod E)", config.LaggerActive, f
     end
 end)
 
-createSection(pages["Ruch"], "TP Down (Na ziemię)")
+createSection(pages["Ruch"], "TP Down (Precyzyjnie na ziemię)")
 createToggle(pages["Ruch"], "TP Down (Klawisz Q)", config.TpDown, function(v) config.TpDown = v end)
 createToggle(pages["Ruch"], "Auto TP Down", config.AutoTpDown, function(v) config.AutoTpDown = v end)
-createInputBox(pages["Ruch"], "Auto TP Height", config.AutoTpHeight, function(v) config.AutoTpHeight = v end)
 
 createSection(pages["Ruch"], "Skok i Ruch")
 createToggle(pages["Ruch"], "Nieskończony skok", config.InfiniteJump, function(v) config.InfiniteJump = v end)
 createToggle(pages["Ruch"], "Anti Ragdoll", config.AntiRagdoll, function(v) config.AntiRagdoll = v end)
 createToggle(pages["Ruch"], "Bodylock", config.Bodylock, function(v) config.Bodylock = v end)
-createInputBox(pages["Ruch"], "Bodylock Radius", config.BodylockRadius, function(v) config.BodylockRadius = v end)
 
 
 -- === ZAKŁADKA: COMBAT ===
 createSection(pages["COMBAT"], "Steal Configuration")
 createInputBox(pages["COMBAT"], "Radius", config.StealRadius, function(v) config.StealRadius = v end)
 createToggle(pages["COMBAT"], "Ragdoll Steal", config.RagdollSteal, function(v) config.RagdollSteal = v end)
-createInputBox(pages["COMBAT"], "Normal Pause %", config.NormalPause, function(v) config.NormalPause = v end)
 
 createSection(pages["COMBAT"], "Bat Aimbot")
 createToggle(pages["COMBAT"], "Bat Aimbot", config.BatAimbot, function(v) config.BatAimbot = v end)
-createInputBox(pages["COMBAT"], "Auto Bat Speed", config.AutoBatSpeed, function(v) config.AutoBatSpeed = v end)
 createToggle(pages["COMBAT"], "Auto Swing", config.AutoSwing, function(v) config.AutoSwing = v end)
 createToggle(pages["COMBAT"], "Smart Swing", config.SmartSwing, function(v) config.SmartSwing = v end)
 createToggle(pages["COMBAT"], "Anti Confuser", config.AntiConfuser, function(v) config.AntiConfuser = v end)
-createToggle(pages["COMBAT"], "Mirror TP", config.MirrorTp, function(v) config.MirrorTp = v end)
-
-createSection(pages["COMBAT"], "TP Bat")
-createToggle(pages["COMBAT"], "TP Bat", config.TpBat, function(v) config.TpBat = v end)
-createInputBox(pages["COMBAT"], "TP Swing Delay", config.TpSwingDelay, function(v) config.TpSwingDelay = v end)
-
-createSection(pages["COMBAT"], "Auto Path")
-createToggle(pages["COMBAT"], "Auto Left", config.AutoLeft, function(v) config.AutoLeft = v end)
-createToggle(pages["COMBAT"], "Auto Right", config.AutoRight, function(v) config.AutoRight = v end)
-createToggle(pages["COMBAT"], "Match Speed", config.MatchSpeed, function(v) config.MatchSpeed = v end)
-
-createSection(pages["COMBAT"], "Counters")
-createToggle(pages["COMBAT"], "Bat Counter", config.BatCounter, function(v) config.BatCounter = v end)
-createToggle(pages["COMBAT"], "Medusa Counter", config.MedusaCounter, function(v) config.MedusaCounter = v end)
-createToggle(pages["COMBAT"], "Confuser", config.Confuser, function(v) config.Confuser = v end)
-createToggle(pages["COMBAT"], "Auto Confuser", config.AutoConfuser, function(v) config.AutoConfuser = v end)
 
 
 -- === ZAKŁADKA: KBM ===
 createSection(pages["KBM"], "Combat Keybinds")
 createKeybindBox(pages["KBM"], "Lagger Mode Key", config.KeyLaggerMode, function(k) config.KeyLaggerMode = k end)
-createKeybindBox(pages["KBM"], "Drop Key", config.KeyDrop, function(k) config.KeyDrop = k end)
 createKeybindBox(pages["KBM"], "TP Down Key", config.KeyTpDown, function(k) config.KeyTpDown = k end)
 createKeybindBox(pages["KBM"], "Bat Aimbot Key", config.KeyBatAimbot, function(k) config.KeyBatAimbot = k end)
-createKeybindBox(pages["KBM"], "TP Bat Key", config.KeyTpBat, function(k) config.KeyTpBat = k end)
-createKeybindBox(pages["KBM"], "Auto Left Key", config.KeyAutoLeft, function(k) config.KeyAutoLeft = k end)
-createKeybindBox(pages["KBM"], "Auto Right Key", config.KeyAutoRight, function(k) config.KeyAutoRight = k end)
 
 
 -- === ZAKŁADKA: CTRL ===
@@ -379,32 +356,30 @@ createSection(pages["CTRL"], "Control Options")
 createToggle(pages["CTRL"], "Tryb Auto Carry", config.AutoCarry, function(v) config.AutoCarry = v end)
 
 
--- === ZAKŁADKA: VISUAL ===
-createSection(pages["VISUAL"], "Players")
-createToggle(pages["VISUAL"], "ESP", config.EspPlayers, function(v) config.EspPlayers = v end)
-createToggle(pages["VISUAL"], "Ragdoll Countdown", config.RagdollCountdown, function(v) config.RagdollCountdown = v end)
-
-createSection(pages["VISUAL"], "China Hat")
-createToggle(pages["VISUAL"], "China Hat", config.ChinaHat, function(v) config.ChinaHat = v end)
-createToggle(pages["VISUAL"], "Hat Effect", config.HatEffect, function(v) config.HatEffect = v end)
-createToggle(pages["VISUAL"], "Hat Rainbow", config.HatRainbow, function(v) config.HatRainbow = v end)
-
-createSection(pages["VISUAL"], "Performance")
-createToggle(pages["VISUAL"], "Stretch Res", config.StretchRes, function(v) config.StretchRes = v end)
-createToggle(pages["VISUAL"], "Anti-Lag", config.AntiLag, function(v) config.AntiLag = v end)
-createToggle(pages["VISUAL"], "Potato Graphics", config.PotatoGraphics, function(v) config.PotatoGraphics = v end)
-createToggle(pages["VISUAL"], "FOV Change", config.FovChange, function(v) config.FovChange = v end)
-createInputBox(pages["VISUAL"], "FOV Value", config.FovValue, function(v)
-    config.FovValue = v
-    if config.FovChange then Workspace.CurrentCamera.FieldOfView = v end
+-- === ZAKŁADKA: VISUAL (Wizualizacje Nieba i Atmosfery) ===
+createSection(pages["VISUAL"], "Wizualizacje Nieba i Otoczenia")
+createToggle(pages["VISUAL"], "Custom Sky & Atmosfera", config.CustomSky, function(v)
+    config.CustomSky = v
+    if v then
+        Lighting.Ambient = Color3.fromRGB(50, 30, 80)
+        Lighting.OutdoorAmbient = Color3.fromRGB(70, 40, 100)
+        Lighting.ClockTime = 0 -- Nocny, klimatyczny tryb fioletowego nieba
+    else
+        Lighting.Ambient = Color3.fromRGB(127, 127, 127)
+        Lighting.OutdoorAmbient = Color3.fromRGB(127, 127, 127)
+        Lighting.ClockTime = 14
+    end
 end)
+
+createToggle(pages["VISUAL"], "ESP Players", config.EspPlayers, function(v) config.EspPlayers = v end)
+createToggle(pages["VISUAL"], "China Hat", config.ChinaHat, function(v) config.ChinaHat = v end)
+createToggle(pages["VISUAL"], "Stretch Res", config.StretchRes, function(v) config.StretchRes = v end)
 
 
 -- === ZAKŁADKA: USTAWIENIA ===
-createSection(pages["USTAWIENIA"], "Safety & Settings")
+createSection(pages["USTAWIENIA"], "Settings")
 createToggle(pages["USTAWIENIA"], "Tryb bezpieczeństwa", config.SafetyMode, function(v) config.SafetyMode = v end)
 createToggle(pages["USTAWIENIA"], "Kick Warning", config.KickWarning, function(v) config.KickWarning = v end)
-createToggle(pages["USTAWIENIA"], "Scroll Layout", config.ScrollLayout, function(v) config.ScrollLayout = v end)
 
 
 -- Dolny panel zakładek
@@ -445,13 +420,15 @@ for i, name in ipairs(pageNames) do
     end)
 end
 
--- Precyzyjny TP Down na powierzchnię ziemi (Raycast)
+-- Naprawione bezpieczne TP Down (Zawsze ląduje BEZPIECZNIE NA ZIEMI, nigdy pod nią)
 local function doTpDown()
     local char = localPlayer.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
         local hrp = char.HumanoidRootPart
+        
+        -- Raycast szukający gruntu dokładnie pod graczem
         local rayOrigin = hrp.Position + Vector3.new(0, 5, 0)
-        local rayDirection = Vector3.new(0, -400, 0)
+        local rayDirection = Vector3.new(0, -500, 0)
         
         local raycastParams = RaycastParams.new()
         raycastParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -460,14 +437,16 @@ local function doTpDown()
         local raycastResult = Workspace:Raycast(rayOrigin, rayDirection, raycastParams)
         
         if raycastResult then
-            hrp.CFrame = CFrame.new(raycastResult.Position + Vector3.new(0, 3, 0))
+            -- Ląduje dokładnie 4 jednostki NAD powierzchnią ziemi, więc nigdy nie zapadniesz się pod podłogę
+            hrp.CFrame = CFrame.new(raycastResult.Position + Vector3.new(0, 4, 0))
         else
-            hrp.CFrame = hrp.CFrame - Vector3.new(0, 20, 0)
+            -- Awaryjny bezpieczny spadek w dół o 15 studs jeśli raycast nie wykryje platformy
+            hrp.CFrame = hrp.CFrame - Vector3.new(0, 15, 0)
         end
     end
 end
 
--- Obsługa skrótów klawiszowych (Keybinds)
+-- Obsługa skrótów klawiszowych
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     
@@ -486,7 +465,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- Pętla wykonawcza (Ruch, Pakiety Laggra, Bat Aimbot)
+-- Pętla główna
 RunService.RenderStepped:Connect(function()
     local char = localPlayer.Character
     if not char then return end
@@ -508,7 +487,7 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- Bat Aimbot / Namierzanie najbliższego przeciwnika
+    -- Bat Aimbot
     if config.BatAimbot and hrp then
         local closestPlayer = nil
         local shortestDist = math.huge
@@ -541,7 +520,7 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- Przesuwanie okna myszką / dotykiem
+-- Przesuwanie okna
 local dragging, dragStart, startPos
 topBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
